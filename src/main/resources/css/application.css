@@ -1,0 +1,100 @@
+.root {
+    -fx-font-family: "Aptos", "Inter", "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #16342d;
+}
+
+.app-background {
+    -fx-background-color: linear-gradient(to bottom right, #eef8f3, #dbeee6);
+}
+
+.auth-card {
+    -fx-background-color: white;
+    -fx-background-radius: 18;
+    -fx-border-color: #c9ded5;
+    -fx-border-radius: 18;
+    -fx-effect: dropshadow(gaussian, rgba(22, 52, 45, 0.14), 24, 0.2, 0, 8);
+}
+
+.brand-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #126149;
+}
+
+.brand-mark {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+}
+
+.screen-subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: #526a63;
+    -fx-text-alignment: center;
+}
+
+.text-field,
+.password-field {
+    -fx-background-color: #f7faf8;
+    -fx-background-radius: 9;
+    -fx-border-color: #bed3ca;
+    -fx-border-radius: 9;
+    -fx-padding: 12 14;
+}
+
+.text-field:focused,
+.password-field:focused {
+    -fx-border-color: #16835f;
+    -fx-background-color: white;
+}
+
+.primary-button {
+    -fx-background-color: #137052;
+    -fx-background-radius: 9;
+    -fx-cursor: hand;
+    -fx-font-weight: 700;
+    -fx-padding: 12 18;
+    -fx-text-fill: white;
+}
+
+.primary-button:hover {
+    -fx-background-color: #0e5a42;
+}
+
+.secondary-button {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.72);
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+    -fx-text-fill: white;
+}
+
+.phase-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: #748982;
+    -fx-text-alignment: center;
+}
+
+.top-bar {
+    -fx-background-color: #124d3c;
+}
+
+.top-bar-context {
+    -fx-text-fill: #d6ebe4;
+}
+
+.dashboard-title {
+    -fx-font-size: 36px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #163f34;
+}
+
+.status-pill {
+    -fx-background-color: #cceadd;
+    -fx-background-radius: 20;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 14;
+    -fx-text-fill: #12553f;
+}

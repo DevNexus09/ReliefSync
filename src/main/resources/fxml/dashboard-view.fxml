@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.reliefsync.controller.DashboardController"
+            styleClass="app-background">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16" styleClass="top-bar">
+            <padding>
+                <Insets bottom="18" left="32" right="32" top="18" />
+            </padding>
+            <Label styleClass="brand-mark" text="ReliefSync" />
+            <Label maxWidth="Infinity" styleClass="top-bar-context" text="Coordination dashboard" HBox.hgrow="ALWAYS" />
+            <Button onAction="#signOut" styleClass="secondary-button" text="Back to sign in" />
+        </HBox>
+    </top>
+    <center>
+        <VBox alignment="CENTER" spacing="14">
+            <padding>
+                <Insets bottom="40" left="40" right="40" top="40" />
+            </padding>
+            <Label styleClass="dashboard-title" text="Foundation ready" />
+            <Label maxWidth="620"
+                   styleClass="screen-subtitle"
+                   text="Future phases will add verified requests, allocation decisions, inventory reservations, dispatch coordination, and operational analytics."
+                   textAlignment="CENTER"
+                   wrapText="true" />
+            <Label styleClass="status-pill" text="PHASE 1 · APPLICATION SHELL" />
+        </VBox>
+    </center>
+</BorderPane>
