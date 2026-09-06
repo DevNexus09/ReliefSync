@@ -1,25 +1,25 @@
 .root {
     -fx-font-family: "Aptos", "Inter", "Segoe UI", sans-serif;
     -fx-font-size: 14px;
-    -fx-text-fill: #16342d;
+    -fx-text-fill: #172554;
 }
 
 .app-background {
-    -fx-background-color: linear-gradient(to bottom right, #eef8f3, #dbeee6);
+    -fx-background-color: linear-gradient(to bottom right, #f8fafc, #e8eefc);
 }
 
 .auth-card {
     -fx-background-color: white;
     -fx-background-radius: 18;
-    -fx-border-color: #c9ded5;
+    -fx-border-color: #d8e1f2;
     -fx-border-radius: 18;
-    -fx-effect: dropshadow(gaussian, rgba(22, 52, 45, 0.14), 24, 0.2, 0, 8);
+    -fx-effect: dropshadow(gaussian, rgba(30, 64, 175, 0.13), 24, 0.2, 0, 8);
 }
 
 .brand-title {
     -fx-font-size: 34px;
     -fx-font-weight: 800;
-    -fx-text-fill: #126149;
+    -fx-text-fill: #1d4ed8;
 }
 
 .brand-mark {
@@ -30,7 +30,7 @@
 
 .screen-subtitle {
     -fx-font-size: 16px;
-    -fx-text-fill: #526a63;
+    -fx-text-fill: #52627a;
     -fx-text-alignment: center;
 }
 
@@ -38,19 +38,19 @@
 .password-field {
     -fx-background-color: #f7faf8;
     -fx-background-radius: 9;
-    -fx-border-color: #bed3ca;
+    -fx-border-color: #c7d2e5;
     -fx-border-radius: 9;
     -fx-padding: 12 14;
 }
 
 .text-field:focused,
 .password-field:focused {
-    -fx-border-color: #16835f;
+    -fx-border-color: #2563eb;
     -fx-background-color: white;
 }
 
 .primary-button {
-    -fx-background-color: #137052;
+    -fx-background-color: #2563eb;
     -fx-background-radius: 9;
     -fx-cursor: hand;
     -fx-font-weight: 700;
@@ -59,7 +59,7 @@
 }
 
 .primary-button:hover {
-    -fx-background-color: #0e5a42;
+    -fx-background-color: #1d4ed8;
 }
 
 .secondary-button {
@@ -72,29 +72,45 @@
 
 .phase-note {
     -fx-font-size: 12px;
-    -fx-text-fill: #748982;
+    -fx-text-fill: #6b7890;
     -fx-text-alignment: center;
 }
 
 .top-bar {
-    -fx-background-color: #124d3c;
+    -fx-background-color: #1e3a8a;
 }
 
 .top-bar-context {
-    -fx-text-fill: #d6ebe4;
+    -fx-text-fill: #dbeafe;
 }
 
 .dashboard-title {
     -fx-font-size: 36px;
     -fx-font-weight: 800;
-    -fx-text-fill: #163f34;
+    -fx-text-fill: #172554;
 }
 
 .status-pill {
-    -fx-background-color: #cceadd;
+    -fx-background-color: #dbeafe;
     -fx-background-radius: 20;
     -fx-font-size: 12px;
     -fx-font-weight: 700;
     -fx-padding: 8 14;
-    -fx-text-fill: #12553f;
+    -fx-text-fill: #1e40af;
+}
+
+.database-status {
+    -fx-background-radius: 9;
+    -fx-font-weight: 700;
+    -fx-padding: 10 16;
+}
+
+.database-connected {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #166534;
+}
+
+.database-failed {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #991b1b;
 }

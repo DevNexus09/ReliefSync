@@ -49,3 +49,7 @@ This scope is frozen for the first implementation iteration. A scope change shou
 - Networked real-time multi-user operation
 - Mobile application
 - Advanced route optimization
+
+## Phase 1 boundary
+
+Phase 1 contains only the Maven project, JavaFX application shell, typed navigation, CSS, SQLite connection health check, focused tests, documentation, and CI. It intentionally contains no operational schema, authentication, domain entities, repositories, seed data, or implementations of the seven GoF patterns.

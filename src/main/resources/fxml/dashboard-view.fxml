@@ -16,9 +16,9 @@
             <padding>
                 <Insets bottom="18" left="32" right="32" top="18" />
             </padding>
-            <Label styleClass="brand-mark" text="ReliefSync" />
-            <Label maxWidth="Infinity" styleClass="top-bar-context" text="Coordination dashboard" HBox.hgrow="ALWAYS" />
-            <Button onAction="#signOut" styleClass="secondary-button" text="Back to sign in" />
+            <Label styleClass="brand-mark" text="ReliefSync Dashboard" />
+            <Label maxWidth="Infinity" styleClass="top-bar-context" text="Foundation preview" HBox.hgrow="ALWAYS" />
+            <Button onAction="#signOut" styleClass="secondary-button" text="Back to Login" />
         </HBox>
     </top>
     <center>
@@ -26,13 +26,14 @@
             <padding>
                 <Insets bottom="40" left="40" right="40" top="40" />
             </padding>
-            <Label styleClass="dashboard-title" text="Foundation ready" />
+            <Label styleClass="dashboard-title" text="Phase 1 Foundation Complete" />
             <Label maxWidth="620"
                    styleClass="screen-subtitle"
                    text="Future phases will add verified requests, allocation decisions, inventory reservations, dispatch coordination, and operational analytics."
                    textAlignment="CENTER"
                    wrapText="true" />
             <Label styleClass="status-pill" text="PHASE 1 · APPLICATION SHELL" />
+            <Label fx:id="databaseStatusLabel" styleClass="database-status" text="Database: Checking" />
         </VBox>
     </center>
 </BorderPane>

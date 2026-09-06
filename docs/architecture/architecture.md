@@ -24,11 +24,15 @@ Phase 1 implements only this executable subset:
 
 ```text
 ReliefSyncApplication → SceneManager → FXML views
-ReliefSyncApplication → DatabaseManager → SQLite
+ReliefSyncApplication → DatabaseHealthCheck → DatabaseManager → SQLite
 Controllers → NavigationService → SceneManager
 ```
 
 No business feature depends on persistence during Phase 1.
+
+## Runtime boundary
+
+ReliefSync is a local Java 21 desktop application. Phase 1 uses Maven, JavaFX, JDBC, and an embedded SQLite database only. It does not require Node.js, Python, Docker, a separate backend service, or an external database server.
 
 ## Layer responsibilities
 
@@ -46,7 +50,7 @@ Services will own validation, authorization, transactions, and business workflow
 
 ### Repositories
 
-Repositories will execute persistence operations and map database rows to models. They must not depend on JavaFX, controllers, or allocation strategies.
+Repositories will execute persistence operations and map database rows to models. SQLite-specific implementations will live in `repository.sqlite`. Repositories must not depend on JavaFX, controllers, or allocation strategies.
 
 ### Database
 
@@ -66,22 +70,22 @@ Forbidden dependencies:
 
 - Repository → Controller
 - Model → JavaFX Controller
-- FXML → SQL
+- FXML → SQL or business logic
 - Controller → JDBC
 - Strategy → JavaFX
 - Repository → Strategy
 
 ## Navigation
 
-`SceneManager` owns the primary stage, loads FXML, applies the shared stylesheet, replaces scenes, and reports navigation failures. Controllers never create additional stages. `NavigationService` gives controllers semantic navigation operations without exposing FXML paths.
+`View` defines each FXML path and window title in one place. `SceneManager` owns the primary stage, loads FXML, applies the shared stylesheet, replaces scenes, and reports navigation failures. Controllers never create additional stages. `NavigationService` gives controllers semantic navigation operations without exposing FXML paths.
 
 ## Database connection
 
-`DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, enables SQLite foreign keys per connection, and provides the Phase 1 smoke queries. Callers use try-with-resources so connections, statements, and result sets are closed deterministically.
+`DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, and enables SQLite foreign keys per connection. `DatabaseHealthCheck` owns the Phase 1 `SELECT 1` query. Callers use try-with-resources so connections, statements, and result sets close deterministically.
 
 ## Decisions deferred beyond Phase 1
 
-- Operational schema and seed data
+- Operational schema, migrations, and seed data
 - Domain models and repositories
 - Authentication and authorization
 - Allocation contracts and formulas
