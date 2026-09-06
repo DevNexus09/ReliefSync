@@ -1,7 +1,7 @@
 package com.reliefsync.application;
 
-import com.reliefsync.database.DatabaseManager;
-import java.sql.SQLException;
+import com.reliefsync.database.DatabaseHealthCheck;
+import com.reliefsync.database.DatabaseHealthCheck.HealthStatus;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -12,23 +12,19 @@ public class ReliefSyncApplication extends Application {
 
     @Override
     public void start(Stage stage) {
-        verifyDatabaseConnection();
-        SceneManager.initialize(stage);
+        HealthStatus databaseStatus = checkDatabaseConnection();
+        SceneManager.initialize(stage, databaseStatus.connected());
         SceneManager.showLogin();
     }
 
-    private void verifyDatabaseConnection() {
-        try {
-            DatabaseManager databaseManager = new DatabaseManager();
-            if (!databaseManager.isConnectionValid()) {
-                throw new SQLException("SQLite SELECT 1 smoke query did not return the expected result.");
-            }
-            String sqliteVersion = databaseManager.getSqliteVersion();
-            LOGGER.info(() -> "SQLite connection successful. Version: " + sqliteVersion);
-        } catch (SQLException exception) {
-            LOGGER.log(Level.SEVERE, "SQLite connection smoke test failed.", exception);
-            throw new IllegalStateException("ReliefSync could not connect to its local database.", exception);
+    private HealthStatus checkDatabaseConnection() {
+        HealthStatus status = new DatabaseHealthCheck().check();
+        if (status.connected()) {
+            LOGGER.info(() -> "SQLite connection successful. Version: " + status.sqliteVersion());
+        } else {
+            LOGGER.log(Level.SEVERE, "SQLite connection smoke test failed: {0}", status.detail());
         }
+        return status;
     }
 
     public static void main(String[] args) {

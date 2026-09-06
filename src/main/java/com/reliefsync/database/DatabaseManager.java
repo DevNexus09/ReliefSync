@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
@@ -36,25 +35,6 @@ public final class DatabaseManager {
                 exception.addSuppressed(closeException);
             }
             throw exception;
-        }
-    }
-
-    public boolean isConnectionValid() throws SQLException {
-        try (Connection connection = openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet result = statement.executeQuery("SELECT 1")) {
-            return result.next() && result.getInt(1) == 1;
-        }
-    }
-
-    public String getSqliteVersion() throws SQLException {
-        try (Connection connection = openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet result = statement.executeQuery("SELECT sqlite_version()")) {
-            if (!result.next()) {
-                throw new SQLException("SQLite did not return a version.");
-            }
-            return result.getString(1);
         }
     }
 
