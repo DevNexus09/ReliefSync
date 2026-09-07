@@ -1,0 +1,13 @@
+CREATE INDEX idx_request_event ON relief_requests(disaster_event_id);
+CREATE INDEX idx_request_area ON relief_requests(affected_area_id);
+CREATE INDEX idx_request_state ON relief_requests(state);
+CREATE INDEX idx_request_priority ON relief_requests(priority);
+CREATE UNIQUE INDEX idx_inventory_center_resource ON center_inventory(relief_center_id, resource_id);
+CREATE INDEX idx_allocation_request ON allocations(request_id);
+CREATE INDEX idx_dispatch_status ON dispatches(status);
+CREATE INDEX idx_notification_user_unread ON notifications(user_id, is_read);
+CREATE INDEX idx_verification_request ON verification_records(request_id);
+CREATE INDEX idx_allocation_item_allocation ON allocation_items(allocation_id);
+CREATE INDEX idx_dispatch_allocation ON dispatches(allocation_id);
+CREATE INDEX idx_dispatch_vehicle ON dispatches(vehicle_id);
+CREATE INDEX idx_audit_entity ON audit_events(entity_type, entity_id);

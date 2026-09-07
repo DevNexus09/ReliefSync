@@ -76,6 +76,18 @@
     -fx-text-alignment: center;
 }
 
+.form-error {
+    -fx-text-fill: #b91c1c;
+    -fx-font-weight: bold;
+    -fx-min-height: 20px;
+}
+
+.session-detail {
+    -fx-text-fill: #334155;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
 .top-bar {
     -fx-background-color: #1e3a8a;
 }

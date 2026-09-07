@@ -26,13 +26,15 @@
             <padding>
                 <Insets bottom="40" left="40" right="40" top="40" />
             </padding>
-            <Label styleClass="dashboard-title" text="Phase 1 Foundation Complete" />
+            <Label fx:id="welcomeLabel" styleClass="dashboard-title" text="Welcome" />
+            <Label fx:id="usernameLabel" styleClass="session-detail" text="Username:" />
+            <Label fx:id="roleLabel" styleClass="session-detail" text="Role:" />
             <Label maxWidth="620"
                    styleClass="screen-subtitle"
-                   text="Future phases will add verified requests, allocation decisions, inventory reservations, dispatch coordination, and operational analytics."
+                   text="Phase 2 provides persistent domain infrastructure, secure authentication, and centralized role permissions. Operational workflows arrive in later phases."
                    textAlignment="CENTER"
                    wrapText="true" />
-            <Label styleClass="status-pill" text="PHASE 1 · APPLICATION SHELL" />
+            <Label styleClass="status-pill" text="PHASE 2 · DOMAIN &amp; AUTHENTICATION" />
             <Label fx:id="databaseStatusLabel" styleClass="database-status" text="Database: Checking" />
         </VBox>
     </center>

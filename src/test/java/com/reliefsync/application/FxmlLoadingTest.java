@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.reliefsync.model.enums.Role;
+import com.reliefsync.security.UserSession;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -19,52 +21,64 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class FxmlLoadingTest {
-    @BeforeAll
-    static void startJavaFxToolkit() throws InterruptedException {
-        CountDownLatch started = new CountDownLatch(1);
-        Platform.startup(started::countDown);
-        assertTrue(started.await(10, TimeUnit.SECONDS));
-    }
+  private static ApplicationContext context;
 
-    @AfterAll
-    static void stopJavaFxToolkit() {
-        Platform.exit();
-    }
+  @BeforeAll
+  static void startJavaFxToolkit() throws InterruptedException {
+    context = new ApplicationContext();
+    context.sessionManager().login(new UserSession(1, "Test User", "tester", Role.ADMINISTRATOR));
+    CountDownLatch started = new CountDownLatch(1);
+    Platform.startup(started::countDown);
+    assertTrue(started.await(10, TimeUnit.SECONDS));
+  }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"LOGIN", "DASHBOARD"})
-    void givenARegisteredView_whenFxmlLoads_thenNoErrorOccurs(String viewName) throws Exception {
-        View view = View.valueOf(viewName);
-        assertNotNull(ReliefSyncApplication.class.getResource(view.getFxmlPath()));
+  @AfterAll
+  static void stopJavaFxToolkit() {
+    Platform.exit();
+  }
 
-        FutureTask<Parent> loadTask = new FutureTask<>(() -> FXMLLoader.load(
-                ReliefSyncApplication.class.getResource(view.getFxmlPath())));
-        Platform.runLater(loadTask);
-        assertNotNull(assertDoesNotThrow(() -> loadTask.get()));
-    }
+  @ParameterizedTest
+  @ValueSource(strings = {"LOGIN", "DASHBOARD"})
+  void givenARegisteredView_whenFxmlLoads_thenNoErrorOccurs(String viewName) throws Exception {
+    View view = View.valueOf(viewName);
+    assertNotNull(ReliefSyncApplication.class.getResource(view.getFxmlPath()));
 
-    @Test
-    void givenOneStage_whenNavigating_thenTheStageAndStylesheetAreReused() throws Exception {
-        FutureTask<Void> navigationTask = new FutureTask<>(() -> {
-            Stage stage = new Stage();
-            SceneManager.initialize(stage, true);
+    FutureTask<Parent> loadTask =
+        new FutureTask<>(
+            () -> {
+              FXMLLoader loader =
+                  new FXMLLoader(ReliefSyncApplication.class.getResource(view.getFxmlPath()));
+              loader.setControllerFactory(context.controllerFactory());
+              return loader.load();
+            });
+    Platform.runLater(loadTask);
+    assertNotNull(assertDoesNotThrow(() -> loadTask.get()));
+  }
 
-            SceneManager.showLogin();
-            assertEquals("ReliefSync | Sign in", stage.getTitle());
-            assertEquals(1, stage.getScene().getStylesheets().size());
-            assertTrue(SceneManager.isDatabaseConnected());
+  @Test
+  void givenOneStage_whenNavigating_thenTheStageAndStylesheetAreReused() throws Exception {
+    FutureTask<Void> navigationTask =
+        new FutureTask<>(
+            () -> {
+              Stage stage = new Stage();
+              SceneManager.initialize(stage, true, context.controllerFactory());
 
-            NavigationService.showDashboard();
-            assertEquals("ReliefSync | Dashboard", stage.getTitle());
-            assertEquals(1, stage.getScene().getStylesheets().size());
+              SceneManager.showLogin();
+              assertEquals("ReliefSync | Sign in", stage.getTitle());
+              assertEquals(1, stage.getScene().getStylesheets().size());
+              assertTrue(SceneManager.isDatabaseConnected());
 
-            NavigationService.showLogin();
-            assertEquals("ReliefSync | Sign in", stage.getTitle());
-            stage.close();
-            return null;
-        });
+              NavigationService.showDashboard();
+              assertEquals("ReliefSync | Dashboard", stage.getTitle());
+              assertEquals(1, stage.getScene().getStylesheets().size());
 
-        Platform.runLater(navigationTask);
-        assertDoesNotThrow(() -> navigationTask.get());
-    }
+              NavigationService.showLogin();
+              assertEquals("ReliefSync | Sign in", stage.getTitle());
+              stage.close();
+              return null;
+            });
+
+    Platform.runLater(navigationTask);
+    assertDoesNotThrow(() -> navigationTask.get());
+  }
 }

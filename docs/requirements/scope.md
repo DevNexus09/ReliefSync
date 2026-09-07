@@ -50,6 +50,6 @@ This scope is frozen for the first implementation iteration. A scope change shou
 - Mobile application
 - Advanced route optimization
 
-## Phase 1 boundary
+## Phase 2 boundary
 
-Phase 1 contains only the Maven project, JavaFX application shell, typed navigation, CSS, SQLite connection health check, focused tests, documentation, and CI. It intentionally contains no operational schema, authentication, domain entities, repositories, seed data, or implementations of the seven GoF patterns.
+Phase 2 contains the versioned base schema, typed domain models, entity-specific repositories, secure authentication, centralized authorization, opt-in demo seeding, authenticated login/dashboard integration, tests, and documentation. It intentionally contains no operational workflow services or implementations of the seven GoF patterns.

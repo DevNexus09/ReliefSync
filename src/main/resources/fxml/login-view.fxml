@@ -21,15 +21,16 @@
             <Label styleClass="screen-subtitle"
                    text="Intelligent Disaster Relief Resource Coordination System"
                    wrapText="true" />
-            <TextField accessibleText="Username" promptText="Username" />
-            <PasswordField accessibleText="Password" promptText="Password" />
+            <TextField fx:id="usernameField" accessibleText="Username" promptText="Username" />
+            <PasswordField fx:id="passwordField" accessibleText="Password" promptText="Password" />
             <Button defaultButton="true"
                     maxWidth="Infinity"
-                    onAction="#openDashboard"
+                    onAction="#handleLogin"
                     styleClass="primary-button"
-                    text="Continue" />
+                    text="Sign In" />
+            <Label fx:id="errorLabel" styleClass="form-error" wrapText="true" />
             <Label styleClass="phase-note"
-                   text="Phase 1: real authentication is not active yet."
+                   text="Demo data is available only when RELIEFSYNC_SEED_DEMO=true."
                    wrapText="true" />
         </VBox>
     </center>
