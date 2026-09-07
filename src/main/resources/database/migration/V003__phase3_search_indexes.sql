@@ -1,0 +1,11 @@
+CREATE INDEX IF NOT EXISTS idx_affected_area_severity ON affected_areas(severity);
+CREATE INDEX IF NOT EXISTS idx_affected_area_district ON affected_areas(district);
+CREATE INDEX IF NOT EXISTS idx_affected_area_event_status ON affected_areas(disaster_event_id, status);
+CREATE INDEX IF NOT EXISTS idx_affected_area_accessibility ON affected_areas(accessibility);
+CREATE INDEX IF NOT EXISTS idx_vehicle_status ON vehicles(status);
+CREATE INDEX IF NOT EXISTS idx_vehicle_center_status ON vehicles(relief_center_id, status);
+CREATE INDEX IF NOT EXISTS idx_resource_category ON resources(category);
+CREATE INDEX IF NOT EXISTS idx_resource_active ON resources(active);
+CREATE INDEX IF NOT EXISTS idx_relief_center_district ON relief_centers(district);
+CREATE INDEX IF NOT EXISTS idx_relief_center_active ON relief_centers(active);
+CREATE INDEX IF NOT EXISTS idx_disaster_event_status ON disaster_events(status);

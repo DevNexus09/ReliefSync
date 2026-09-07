@@ -17,6 +17,9 @@ import java.util.Objects;
 public final class DatabaseSeeder {
   public static final String DEMO_USERNAME = "admin";
   public static final String DEMO_PASSWORD = "ReliefSync@2026";
+  public static final String CENTER_MANAGER_USERNAME = "center_manager";
+  public static final String TRANSPORT_USERNAME = "transport";
+  public static final String AREA_COORDINATOR_USERNAME = "area_coordinator";
   private static final String BASE_SEED = "/database/seed/base_seed.sql";
 
   private final TransactionManager transactionManager;
@@ -31,26 +34,37 @@ public final class DatabaseSeeder {
     transactionManager.execute(
         connection -> {
           executeBaseSeed(connection);
-          seedAdministrator(connection);
+          seedUser(connection, "ReliefSync Administrator", DEMO_USERNAME, "ADMINISTRATOR");
+          seedUser(
+              connection, "Demo Center Manager", CENTER_MANAGER_USERNAME, "RELIEF_CENTER_MANAGER");
+          seedUser(
+              connection,
+              "Demo Transport Coordinator",
+              TRANSPORT_USERNAME,
+              "TRANSPORT_COORDINATOR");
+          seedUser(
+              connection, "Demo Area Coordinator", AREA_COORDINATOR_USERNAME, "AREA_COORDINATOR");
           return null;
         });
   }
 
-  private void seedAdministrator(Connection connection) throws SQLException {
-    if (userExists(connection, DEMO_USERNAME)) return;
+  private void seedUser(Connection connection, String fullName, String username, String role)
+      throws SQLException {
+    if (userExists(connection, username)) return;
 
     PasswordHash credentials = passwordHasher.hash(DEMO_PASSWORD.toCharArray());
     String sql =
-        """
+"""
 INSERT INTO users(full_name, username, password_hash, password_salt, role, active, created_at)
-VALUES (?, ?, ?, ?, 'ADMINISTRATOR', 1, ?)
+VALUES (?, ?, ?, ?, ?, 1, ?)
 """;
     try (PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, "ReliefSync Administrator");
-      statement.setString(2, DEMO_USERNAME);
+      statement.setString(1, fullName);
+      statement.setString(2, username);
       statement.setString(3, credentials.hash());
       statement.setString(4, credentials.salt());
-      statement.setString(5, LocalDateTime.now().toString());
+      statement.setString(5, role);
+      statement.setString(6, LocalDateTime.now().toString());
       statement.executeUpdate();
     }
   }

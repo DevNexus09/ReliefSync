@@ -53,3 +53,7 @@ This scope is frozen for the first implementation iteration. A scope change shou
 ## Phase 2 boundary
 
 Phase 2 contains the versioned base schema, typed domain models, entity-specific repositories, secure authentication, centralized authorization, opt-in demo seeding, authenticated login/dashboard integration, tests, and documentation. It intentionally contains no operational workflow services or implementations of the seven GoF patterns.
+
+## Phase 3 boundary
+
+Phase 3 adds the six core management modules: disaster events, affected areas, relief centers, resources, inventory, and vehicles. It includes bounded repository search, role-aware navigation, lifecycle-safe activation controls, and transactionally audited stock adjustments. Relief requests, verification, allocation, reservation, dispatch, delivery, notifications, reallocation, analytics, and all seven required GoF pattern implementations remain deferred.

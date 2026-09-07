@@ -2,6 +2,7 @@ package com.reliefsync.repository;
 
 import com.reliefsync.model.Vehicle;
 import com.reliefsync.model.enums.VehicleStatus;
+import com.reliefsync.model.search.VehicleSearchCriteria;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,8 @@ public interface VehicleRepository {
   List<Vehicle> findAll();
 
   List<Vehicle> findByStatus(VehicleStatus status);
+
+  List<Vehicle> search(VehicleSearchCriteria criteria, int limit);
 
   long save(Vehicle vehicle);
 

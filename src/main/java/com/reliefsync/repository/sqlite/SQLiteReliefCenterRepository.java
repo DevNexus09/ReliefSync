@@ -3,6 +3,7 @@ package com.reliefsync.repository.sqlite;
 import com.reliefsync.database.DatabaseManager;
 import com.reliefsync.exception.PersistenceException;
 import com.reliefsync.model.ReliefCenter;
+import com.reliefsync.model.search.ReliefCenterSearchCriteria;
 import com.reliefsync.repository.ReliefCenterRepository;
 import java.sql.*;
 import java.util.*;
@@ -35,6 +36,21 @@ public final class SQLiteReliefCenterRepository implements ReliefCenterRepositor
       return list;
     } catch (SQLException e) {
       throw fail("find relief centers", e);
+    }
+  }
+
+  public List<ReliefCenter> search(ReliefCenterSearchCriteria criteria, int limit) {
+    Objects.requireNonNull(criteria);
+    SqlSearch search = new SqlSearch("SELECT * FROM relief_centers WHERE 1=1");
+    search.add(
+        " AND LOWER(name) LIKE LOWER(?)",
+        criteria.name() == null ? null : "%" + criteria.name().trim() + "%");
+    search.add(" AND LOWER(district)=LOWER(?)", criteria.district());
+    search.add(" AND active=?", criteria.active() == null ? null : criteria.active() ? 1 : 0);
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY name", limit, this::map);
+    } catch (SQLException e) {
+      throw fail("search relief centers", e);
     }
   }
 

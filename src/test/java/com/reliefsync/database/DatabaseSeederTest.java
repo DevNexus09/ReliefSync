@@ -30,7 +30,7 @@ class DatabaseSeederTest {
     User admin = users.findByUsername(DatabaseSeeder.DEMO_USERNAME).orElseThrow();
     assertNotEquals(DatabaseSeeder.DEMO_PASSWORD, admin.passwordHash());
     assertNotEquals(DatabaseSeeder.DEMO_PASSWORD, admin.passwordSalt());
-    assertEquals(1, users.findAll().size());
+    assertEquals(4, users.findAll().size());
     assertEquals(6, new SQLiteResourceRepository(manager).findAll().size());
     AuthenticationService authentication =
         new AuthenticationService(users, hasher, new SessionManager());

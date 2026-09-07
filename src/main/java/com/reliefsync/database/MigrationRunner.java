@@ -18,7 +18,8 @@ public final class MigrationRunner {
   private static final List<Migration> MIGRATIONS =
       List.of(
           new Migration("V001", "initial schema", "V001__initial_schema.sql"),
-          new Migration("V002", "indexes", "V002__indexes.sql"));
+          new Migration("V002", "indexes", "V002__indexes.sql"),
+          new Migration("V003", "phase 3 search indexes", "V003__phase3_search_indexes.sql"));
 
   private final DatabaseManager databaseManager;
 

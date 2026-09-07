@@ -3,6 +3,7 @@ package com.reliefsync.repository.sqlite;
 import com.reliefsync.database.DatabaseManager;
 import com.reliefsync.exception.PersistenceException;
 import com.reliefsync.model.Resource;
+import com.reliefsync.model.search.ResourceSearchCriteria;
 import com.reliefsync.repository.ResourceRepository;
 import java.sql.*;
 import java.util.*;
@@ -35,6 +36,34 @@ public final class SQLiteResourceRepository implements ResourceRepository {
       return list;
     } catch (SQLException e) {
       throw fail("find resources", e);
+    }
+  }
+
+  public Optional<Resource> findByNameAndUnit(String name, String unit) {
+    SqlSearch search =
+        new SqlSearch(
+            "SELECT * FROM resources WHERE LOWER(name)=LOWER(?) AND LOWER(unit)=LOWER(?)");
+    search.add("", name);
+    search.add("", unit);
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY id", 1, this::map).stream().findFirst();
+    } catch (SQLException e) {
+      throw fail("find resource by name and unit", e);
+    }
+  }
+
+  public List<Resource> search(ResourceSearchCriteria criteria, int limit) {
+    Objects.requireNonNull(criteria);
+    SqlSearch search = new SqlSearch("SELECT * FROM resources WHERE 1=1");
+    search.add(
+        " AND LOWER(name) LIKE LOWER(?)",
+        criteria.name() == null ? null : "%" + criteria.name().trim() + "%");
+    search.add(" AND LOWER(category)=LOWER(?)", criteria.category());
+    search.add(" AND active=?", criteria.active() == null ? null : criteria.active() ? 1 : 0);
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY name", limit, this::map);
+    } catch (SQLException e) {
+      throw fail("search resources", e);
     }
   }
 

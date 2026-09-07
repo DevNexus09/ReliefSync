@@ -20,14 +20,16 @@ Repositories / DAOs
 SQLite
 ```
 
-Phase 2 implements this executable subset:
+Phases 2 and 3 implement this executable subset:
 
 ```text
 ReliefSyncApplication → SchemaInitializer → MigrationRunner → SQLite
 login-view.fxml → LoginController → AuthenticationService → UserRepository → SQLite
 AuthenticationService → PasswordHasher + SessionManager
 DashboardController → SessionManager
-Services → AuthorizationService
+Core Management Controllers → Services → Repositories → SQLite
+Services → Validators + AuthorizationService
+InventoryService → InventoryTransactionRepository → TransactionManager → SQLite
 Controllers → NavigationService → SceneManager → FXML views
 ```
 
@@ -49,7 +51,7 @@ FXML and CSS describe the interface. Controllers gather input, display results, 
 
 ### Services and patterns
 
-Services will own validation, authorization, transactions, and business workflows. Strategy, State, Chain of Responsibility, Observer, Command, Factory Method, and Facade components will be introduced only with the corresponding business problem.
+Services own validation, authorization, transactions, and business workflows. During Phase 3, core management controllers call one service directly; the facade remains reserved for later multi-service workflows. Strategy, State, Chain of Responsibility, Observer, Command, Factory Method, and Facade components will be introduced only with the corresponding business problem.
 
 ### Repositories
 
@@ -57,14 +59,15 @@ Repositories will execute persistence operations and map database rows to models
 
 ### Database
 
-SQLite persists the Phase 2 base schema. `DatabaseManager` configures every connection, `MigrationRunner` applies versioned classpath migrations transactionally, and `TransactionManager` provides a reusable atomic-work boundary. Demo seeding is opt-in and transactionally repeatable.
+SQLite persists the base schema and Phase 3 search indexes. `DatabaseManager` configures every connection, `MigrationRunner` applies versioned classpath migrations transactionally, and `TransactionManager` provides a reusable atomic-work boundary. Inventory adjustments and their audit events share one transaction-scoped repository context. Demo seeding is opt-in and transactionally repeatable.
 
 ## Dependency rules
 
 Allowed direction:
 
 ```text
-Controller → Facade → Service → Repository → Database
+Controller → Service → Repository → Database (single-service Phase 3 operations)
+Controller → Facade → Service → Repository → Database (later cross-service workflows)
 ```
 
 Pattern components may be used by services or the facade.
@@ -86,9 +89,9 @@ Forbidden dependencies:
 
 `DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, enables SQLite foreign keys, and configures a busy timeout per connection. `DatabaseHealthCheck` owns `SELECT 1`. Callers use try-with-resources so connections, statements, and result sets close deterministically.
 
-## Decisions deferred beyond Phase 2
+## Decisions deferred beyond Phase 3
 
 - Allocation contracts and formulas
 - Request, allocation, and dispatch lifecycles
 - The seven required GoF pattern implementations
-- Workflow services, analytics, and reallocation behavior
+- Relief-request workflow, allocation, dispatch, notifications, analytics, and reallocation behavior

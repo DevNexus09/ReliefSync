@@ -5,6 +5,7 @@ import com.reliefsync.exception.PersistenceException;
 import com.reliefsync.model.DisasterEvent;
 import com.reliefsync.model.enums.DisasterStatus;
 import com.reliefsync.model.enums.DisasterType;
+import com.reliefsync.model.search.DisasterEventSearchCriteria;
 import com.reliefsync.repository.DisasterEventRepository;
 import java.sql.*;
 import java.util.*;
@@ -27,6 +28,26 @@ public final class SQLiteDisasterEventRepository implements DisasterEventReposit
   public List<DisasterEvent> findByStatus(DisasterStatus status) {
     return many(
         "SELECT * FROM disaster_events WHERE status=? ORDER BY start_date DESC", status.name());
+  }
+
+  public List<DisasterEvent> search(DisasterEventSearchCriteria criteria, int limit) {
+    Objects.requireNonNull(criteria);
+    SqlSearch search = new SqlSearch("SELECT * FROM disaster_events WHERE 1=1");
+    search.add(
+        " AND LOWER(name) LIKE LOWER(?)",
+        criteria.name() == null ? null : "%" + criteria.name().trim() + "%");
+    search.add(" AND type=?", criteria.type() == null ? null : criteria.type().name());
+    search.add(" AND status=?", criteria.status() == null ? null : criteria.status().name());
+    search.add(
+        " AND start_date>=?",
+        criteria.startFrom() == null ? null : criteria.startFrom().toString());
+    search.add(
+        " AND start_date<=?", criteria.startTo() == null ? null : criteria.startTo().toString());
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY start_date DESC", limit, this::map);
+    } catch (SQLException e) {
+      throw fail("search disaster events", e);
+    }
   }
 
   public long save(DisasterEvent event) {

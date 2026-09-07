@@ -38,7 +38,17 @@ class FxmlLoadingTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"LOGIN", "DASHBOARD"})
+  @ValueSource(
+      strings = {
+        "LOGIN",
+        "DASHBOARD",
+        "DISASTER_EVENTS",
+        "AFFECTED_AREAS",
+        "RELIEF_CENTERS",
+        "RESOURCES",
+        "INVENTORY",
+        "VEHICLES"
+      })
   void givenARegisteredView_whenFxmlLoads_thenNoErrorOccurs(String viewName) throws Exception {
     View view = View.valueOf(viewName);
     assertNotNull(ReliefSyncApplication.class.getResource(view.getFxmlPath()));
