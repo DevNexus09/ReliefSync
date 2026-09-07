@@ -1,0 +1,10 @@
+package com.reliefsync.model.enums;
+
+public enum Role {
+  ADMINISTRATOR,
+  RELIEF_COORDINATOR,
+  AREA_COORDINATOR,
+  VOLUNTEER,
+  RELIEF_CENTER_MANAGER,
+  TRANSPORT_COORDINATOR
+}
