@@ -20,19 +20,22 @@ Repositories / DAOs
 SQLite
 ```
 
-Phase 1 implements only this executable subset:
+Phase 2 implements this executable subset:
 
 ```text
-ReliefSyncApplication → SceneManager → FXML views
-ReliefSyncApplication → DatabaseHealthCheck → DatabaseManager → SQLite
-Controllers → NavigationService → SceneManager
+ReliefSyncApplication → SchemaInitializer → MigrationRunner → SQLite
+login-view.fxml → LoginController → AuthenticationService → UserRepository → SQLite
+AuthenticationService → PasswordHasher + SessionManager
+DashboardController → SessionManager
+Services → AuthorizationService
+Controllers → NavigationService → SceneManager → FXML views
 ```
 
-No business feature depends on persistence during Phase 1.
+`ApplicationContext` performs manual dependency wiring, and `ControllerFactory` supplies constructor-injected controllers through `FXMLLoader`. Neither is presented as one of the required GoF patterns.
 
 ## Runtime boundary
 
-ReliefSync is a local Java 21 desktop application. Phase 1 uses Maven, JavaFX, JDBC, and an embedded SQLite database only. It does not require Node.js, Python, Docker, a separate backend service, or an external database server.
+ReliefSync is a local Java 21 desktop application. It uses Maven, JavaFX, JDBC, and an embedded SQLite database only. It does not require Node.js, Python, Docker, a separate backend service, or an external database server.
 
 ## Layer responsibilities
 
@@ -42,7 +45,7 @@ FXML and CSS describe the interface. Controllers gather input, display results, 
 
 ### Facade
 
-`ReliefOperationFacade` will expose complete business use cases and coordinate services. Its package is reserved in Phase 1; the facade itself will be introduced when a real workflow requires it.
+`ReliefOperationFacade` will expose complete business use cases and coordinate services. Its package remains reserved; the facade itself will be introduced when a later workflow requires it.
 
 ### Services and patterns
 
@@ -54,7 +57,7 @@ Repositories will execute persistence operations and map database rows to models
 
 ### Database
 
-SQLite will persist operational and audit data. Phase 1 creates only an application-local database file and verifies connectivity; it creates no operational tables.
+SQLite persists the Phase 2 base schema. `DatabaseManager` configures every connection, `MigrationRunner` applies versioned classpath migrations transactionally, and `TransactionManager` provides a reusable atomic-work boundary. Demo seeding is opt-in and transactionally repeatable.
 
 ## Dependency rules
 
@@ -81,13 +84,11 @@ Forbidden dependencies:
 
 ## Database connection
 
-`DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, and enables SQLite foreign keys per connection. `DatabaseHealthCheck` owns the Phase 1 `SELECT 1` query. Callers use try-with-resources so connections, statements, and result sets close deterministically.
+`DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, enables SQLite foreign keys, and configures a busy timeout per connection. `DatabaseHealthCheck` owns `SELECT 1`. Callers use try-with-resources so connections, statements, and result sets close deterministically.
 
-## Decisions deferred beyond Phase 1
+## Decisions deferred beyond Phase 2
 
-- Operational schema, migrations, and seed data
-- Domain models and repositories
-- Authentication and authorization
 - Allocation contracts and formulas
 - Request, allocation, and dispatch lifecycles
 - The seven required GoF pattern implementations
+- Workflow services, analytics, and reallocation behavior

@@ -68,9 +68,11 @@
 - **FR-043:** The system reports dispatch and delivery performance, including failures.
 - **FR-044:** The system reports allocation fulfillment and fairness information.
 
-## Phase 1 executable foundation
+## Implemented foundation
 
-- **FR-045:** The application launches into a placeholder login view.
-- **FR-046:** The placeholder login view can navigate to a placeholder dashboard.
-- **FR-047:** The dashboard can navigate back to the login view without opening another application window.
+- **FR-045:** The application initializes the versioned SQLite schema before showing login.
+- **FR-046:** An active user with valid credentials can establish a safe in-memory session.
+- **FR-047:** Logout clears the current session and returns to login without opening another application window.
 - **FR-048:** Application startup verifies the local SQLite connection and reports its version.
+- **FR-049:** The dashboard displays the authenticated user's name, username, and role.
+- **FR-050:** Demo users and base resources are seeded only when explicitly enabled.

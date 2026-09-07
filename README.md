@@ -41,18 +41,19 @@ Delivery
 Confirmation
 ```
 
-## Phase 1 foundation
+## Implemented foundation
 
-Phase 1 provides the executable foundation only:
+Phase 1 provides the executable JavaFX foundation. Phase 2 adds:
 
-- Maven configuration
-- JavaFX login and dashboard views
-- Centralized navigation and shared CSS
-- SQLite connectivity checks
-- Architecture, scope, requirements, and collaboration documentation
-- Automated application, FXML, navigation, and database smoke tests
+- versioned and repeatable SQLite migrations
+- the persistent base schema for all principal relief workflows
+- typed domain models and entity-specific repositories
+- PBKDF2 password hashing and persistent authentication
+- centralized role-permission authorization
+- optional, idempotent development seeding
+- authenticated dashboard identity and logout
 
-Operational database tables and business features are deferred to their planned implementation phases.
+The advanced allocation, verification, lifecycle, dispatch, notification, and recovery behavior remains deferred to later phases.
 
 ## Prerequisites
 
@@ -77,7 +78,15 @@ mvn clean test
 mvn javafx:run
 ```
 
-The application starts on a placeholder login screen. Select **Continue** to verify FXML navigation. On startup, ReliefSync runs SQLite connection checks and logs the detected SQLite version. The dashboard also displays whether its database connection is available.
+Normal startup migrates the database but does not create a known user. For a local university demonstration, start once with:
+
+```bash
+RELIEFSYNC_SEED_DEMO=true mvn javafx:run
+```
+
+Then sign in with username `admin` and password `ReliefSync@2026`. These are demo credentials only and must not be used for a real deployment. Later runs can use `mvn javafx:run`; the account remains in the local database.
+
+The dashboard displays the authenticated user's name, username, role, and database status. Logout clears the in-memory session and returns to login.
 
 The local database is created at `data/reliefsync.db`. Database files are runtime artifacts and are not committed.
 
@@ -87,7 +96,7 @@ The local database is created at `data/reliefsync.db`. Database files are runtim
 JavaFX Views → Controllers → Facade → Services → Repositories → SQLite
 ```
 
-Phase 1 implements only the JavaFX application shell and database connection boundary. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
+Phase 2 implements the database, domain, repository, authentication, authorization, and UI identity boundaries without introducing later workflow patterns. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
 
 ## Development workflow
 
