@@ -18,52 +18,59 @@ public final class SceneManager {
     private static final double WINDOW_HEIGHT = 700;
 
     private static Stage primaryStage;
+    private static boolean databaseConnected;
 
     private SceneManager() {
     }
 
-    public static void initialize(Stage stage) {
+    public static void initialize(Stage stage, boolean isDatabaseConnected) {
         primaryStage = Objects.requireNonNull(stage, "Primary stage must not be null.");
+        databaseConnected = isDatabaseConnected;
         primaryStage.setMinWidth(900);
         primaryStage.setMinHeight(600);
         primaryStage.setTitle("ReliefSync");
     }
 
     public static void showLogin() {
-        showScene("/fxml/login-view.fxml", "ReliefSync | Sign in");
+        show(View.LOGIN);
     }
 
     public static void showDashboard() {
-        showScene("/fxml/dashboard-view.fxml", "ReliefSync | Dashboard");
+        show(View.DASHBOARD);
     }
 
-    private static void showScene(String fxmlPath, String title) {
+    public static boolean isDatabaseConnected() {
+        return databaseConnected;
+    }
+
+    private static void show(View view) {
         if (primaryStage == null) {
             throw new IllegalStateException("SceneManager must be initialized before navigation.");
         }
 
         try {
-            Parent root = loadView(fxmlPath);
+            Parent root = loadView(view);
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
             URL stylesheet = requireResource(STYLESHEET);
             scene.getStylesheets().add(stylesheet.toExternalForm());
 
-            primaryStage.setTitle(title);
+            primaryStage.setTitle(view.getWindowTitle());
             primaryStage.setScene(scene);
             primaryStage.show();
         } catch (RuntimeException exception) {
-            LOGGER.log(Level.SEVERE, "Unable to open view " + fxmlPath, exception);
+            LOGGER.log(Level.SEVERE, "Unable to open view " + view, exception);
             showError("Navigation error", "ReliefSync could not open the requested screen.");
             throw exception;
         }
     }
 
-    public static Parent loadView(String fxmlPath) {
-        URL resource = requireResource(fxmlPath);
+    public static Parent loadView(View view) {
+        Objects.requireNonNull(view, "View must not be null.");
+        URL resource = requireResource(view.getFxmlPath());
         try {
             return FXMLLoader.load(resource);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to load FXML resource: " + fxmlPath, exception);
+            throw new IllegalStateException("Unable to load FXML resource: " + view.getFxmlPath(), exception);
         }
     }
 

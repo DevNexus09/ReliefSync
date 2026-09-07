@@ -14,8 +14,8 @@ class ReliefSyncApplicationTest {
 
     @Test
     void requiredViewAndStyleResourcesExist() {
-        assertNotNull(ReliefSyncApplication.class.getResource("/fxml/login-view.fxml"));
-        assertNotNull(ReliefSyncApplication.class.getResource("/fxml/dashboard-view.fxml"));
+        assertNotNull(ReliefSyncApplication.class.getResource(View.LOGIN.getFxmlPath()));
+        assertNotNull(ReliefSyncApplication.class.getResource(View.DASHBOARD.getFxmlPath()));
         assertNotNull(ReliefSyncApplication.class.getResource("/css/application.css"));
     }
 }

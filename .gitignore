@@ -1,14 +1,25 @@
 # Maven
 target/
+out/
 
 # Runtime data
 data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.db-journal
+data/*.sqlite
+data/*.sqlite3
 
 # Logs
 *.log
+
+# Temporary files
+*.tmp
+*.swp
+
+# Environment and secrets
+.env
+.env.*
 
 # IntelliJ IDEA
 .idea/
@@ -24,4 +35,3 @@ data/*.db-journal
 
 # macOS
 .DS_Store
-

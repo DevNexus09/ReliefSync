@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URL;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +14,7 @@ import javafx.scene.Parent;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -32,25 +32,27 @@ class FxmlLoadingTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/fxml/login-view.fxml", "/fxml/dashboard-view.fxml"})
-    void viewLoadsWithoutError(String resourcePath) throws Exception {
-        URL resource = ReliefSyncApplication.class.getResource(resourcePath);
-        assertNotNull(resource);
+    @ValueSource(strings = {"LOGIN", "DASHBOARD"})
+    void givenARegisteredView_whenFxmlLoads_thenNoErrorOccurs(String viewName) throws Exception {
+        View view = View.valueOf(viewName);
+        assertNotNull(ReliefSyncApplication.class.getResource(view.getFxmlPath()));
 
-        FutureTask<Parent> loadTask = new FutureTask<>(() -> FXMLLoader.load(resource));
+        FutureTask<Parent> loadTask = new FutureTask<>(() -> FXMLLoader.load(
+                ReliefSyncApplication.class.getResource(view.getFxmlPath())));
         Platform.runLater(loadTask);
         assertNotNull(assertDoesNotThrow(() -> loadTask.get()));
     }
 
-    @org.junit.jupiter.api.Test
-    void sceneManagerNavigatesUsingOneStageAndAppliesCss() throws Exception {
+    @Test
+    void givenOneStage_whenNavigating_thenTheStageAndStylesheetAreReused() throws Exception {
         FutureTask<Void> navigationTask = new FutureTask<>(() -> {
             Stage stage = new Stage();
-            SceneManager.initialize(stage);
+            SceneManager.initialize(stage, true);
 
             SceneManager.showLogin();
             assertEquals("ReliefSync | Sign in", stage.getTitle());
             assertEquals(1, stage.getScene().getStylesheets().size());
+            assertTrue(SceneManager.isDatabaseConnected());
 
             NavigationService.showDashboard();
             assertEquals("ReliefSync | Dashboard", stage.getTitle());

@@ -19,17 +19,17 @@
             </padding>
             <Label styleClass="brand-title" text="ReliefSync" />
             <Label styleClass="screen-subtitle"
-                   text="Intelligent disaster relief coordination"
+                   text="Intelligent Disaster Relief Resource Coordination System"
                    wrapText="true" />
-            <TextField accessibleText="Email address" promptText="Email address" />
+            <TextField accessibleText="Username" promptText="Username" />
             <PasswordField accessibleText="Password" promptText="Password" />
             <Button defaultButton="true"
                     maxWidth="Infinity"
                     onAction="#openDashboard"
                     styleClass="primary-button"
-                    text="Continue to dashboard" />
+                    text="Continue" />
             <Label styleClass="phase-note"
-                   text="Phase 1 navigation preview — authentication is added in a later phase."
+                   text="Phase 1: real authentication is not active yet."
                    wrapText="true" />
         </VBox>
     </center>
