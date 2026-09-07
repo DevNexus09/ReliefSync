@@ -1,14 +1,17 @@
 package com.reliefsync.application;
 
 public final class NavigationService {
-    private NavigationService() {
-    }
+  private NavigationService() {}
 
-    public static void showLogin() {
-        SceneManager.showLogin();
-    }
+  public static void showLogin() {
+    SceneManager.showLogin();
+  }
 
-    public static void showDashboard() {
-        SceneManager.showDashboard();
-    }
+  public static void showDashboard() {
+    SceneManager.showDashboard();
+  }
+
+  public static void show(View view) {
+    SceneManager.showView(view);
+  }
 }

@@ -6,6 +6,7 @@ import com.reliefsync.model.AffectedArea;
 import com.reliefsync.model.enums.Accessibility;
 import com.reliefsync.model.enums.MedicalUrgency;
 import com.reliefsync.model.enums.Severity;
+import com.reliefsync.model.search.AffectedAreaSearchCriteria;
 import com.reliefsync.repository.AffectedAreaRepository;
 import java.sql.*;
 import java.util.*;
@@ -28,6 +29,23 @@ public final class SQLiteAffectedAreaRepository implements AffectedAreaRepositor
 
   public List<AffectedArea> findByDisasterEventId(long id) {
     return query("SELECT * FROM affected_areas WHERE disaster_event_id=? ORDER BY name", id);
+  }
+
+  public List<AffectedArea> search(AffectedAreaSearchCriteria criteria, int limit) {
+    Objects.requireNonNull(criteria);
+    SqlSearch search = new SqlSearch("SELECT * FROM affected_areas WHERE 1=1");
+    search.add(" AND disaster_event_id=?", criteria.disasterEventId());
+    search.add(" AND LOWER(district)=LOWER(?)", criteria.district());
+    search.add(" AND severity=?", criteria.severity() == null ? null : criteria.severity().name());
+    search.add(
+        " AND accessibility=?",
+        criteria.accessibility() == null ? null : criteria.accessibility().name());
+    search.add(" AND status=?", criteria.status());
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY name", limit, this::map);
+    } catch (SQLException e) {
+      throw fail("search affected areas", e);
+    }
   }
 
   public long save(AffectedArea v) {

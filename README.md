@@ -41,7 +41,7 @@ Delivery
 Confirmation
 ```
 
-## Implemented foundation
+## Implemented phases
 
 Phase 1 provides the executable JavaFX foundation. Phase 2 adds:
 
@@ -52,6 +52,16 @@ Phase 1 provides the executable JavaFX foundation. Phase 2 adds:
 - centralized role-permission authorization
 - optional, idempotent development seeding
 - authenticated dashboard identity and logout
+
+Phase 3 adds role-aware core management for:
+
+- disaster events and explicit close/reactivate lifecycle actions
+- affected-area assessment data
+- relief centers and resources with non-destructive activation controls
+- transactional inventory initialization and adjustment with audit history
+- calculated available/low-stock status without storing derived availability
+- vehicle registration, home-center assignment, and safe manual availability
+- bounded, parameterized repository search across all six modules
 
 The advanced allocation, verification, lifecycle, dispatch, notification, and recovery behavior remains deferred to later phases.
 
@@ -84,7 +94,16 @@ Normal startup migrates the database but does not create a known user. For a loc
 RELIEFSYNC_SEED_DEMO=true mvn javafx:run
 ```
 
-Then sign in with username `admin` and password `ReliefSync@2026`. These are demo credentials only and must not be used for a real deployment. Later runs can use `mvn javafx:run`; the account remains in the local database.
+All local demo accounts use password `ReliefSync@2026`:
+
+| Username | Role |
+|---|---|
+| `admin` | Administrator |
+| `area_coordinator` | Area Coordinator |
+| `center_manager` | Relief Center Manager |
+| `transport` | Transport Coordinator |
+
+These are demo credentials only and must not be used for a real deployment. Later runs can use `mvn javafx:run`; the accounts remain in the local database.
 
 The dashboard displays the authenticated user's name, username, role, and database status. Logout clears the in-memory session and returns to login.
 
@@ -96,17 +115,17 @@ The local database is created at `data/reliefsync.db`. Database files are runtim
 JavaFX Views → Controllers → Facade → Services → Repositories → SQLite
 ```
 
-Phase 2 implements the database, domain, repository, authentication, authorization, and UI identity boundaries without introducing later workflow patterns. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
+Phase 3 controllers call their application services directly; the planned `ReliefOperationFacade` remains reserved for later cross-service operational workflows. No required GoF pattern is claimed prematurely. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
 
 ## Development workflow
 
-The two developers work from short-lived branches and merge through reviewed pull requests targeting `develop`:
+The two developers work from short-lived branches and merge through reviewed pull requests targeting `main`:
 
-1. Pull the latest `develop` branch.
+1. Pull the latest `main` branch.
 2. Create a branch such as `feature/request-verification`.
 3. Make focused commits with descriptive messages.
 4. Run `mvn clean test` before pushing.
 5. Open a pull request and have the other developer review it.
-6. Merge into `develop` only after tests pass and review comments are resolved.
+6. Merge into `main` only after tests pass and review comments are resolved.
 
 Do not commit IDE settings, generated build output, logs, or local SQLite database files. The complete collaboration policy and team-record placeholders are in [development-workflow.md](docs/development-workflow.md).

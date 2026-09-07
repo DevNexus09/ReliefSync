@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
@@ -31,10 +32,11 @@
             <Label fx:id="roleLabel" styleClass="session-detail" text="Role:" />
             <Label maxWidth="620"
                    styleClass="screen-subtitle"
-                   text="Phase 2 provides persistent domain infrastructure, secure authentication, and centralized role permissions. Operational workflows arrive in later phases."
+                   text="Manage Phase 3 operational master data through the modules permitted for your role."
                    textAlignment="CENTER"
                    wrapText="true" />
-            <Label styleClass="status-pill" text="PHASE 2 · DOMAIN &amp; AUTHENTICATION" />
+            <Label styleClass="status-pill" text="PHASE 3 · CORE MANAGEMENT" />
+            <FlowPane fx:id="moduleLinks" alignment="CENTER" hgap="12" vgap="12" maxWidth="760" />
             <Label fx:id="databaseStatusLabel" styleClass="database-status" text="Database: Checking" />
         </VBox>
     </center>

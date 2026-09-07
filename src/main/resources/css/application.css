@@ -126,3 +126,16 @@
     -fx-background-color: #fee2e2;
     -fx-text-fill: #991b1b;
 }
+
+.module-button {
+    -fx-background-color: white;
+    -fx-border-color: #bfdbfe;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-font-weight: 700;
+    -fx-padding: 16 24;
+    -fx-text-fill: #1e40af;
+    -fx-cursor: hand;
+}
+
+.table-view { -fx-background-color: white; -fx-border-color: #d8e1f2; }

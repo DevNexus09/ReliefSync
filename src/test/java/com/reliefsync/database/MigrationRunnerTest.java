@@ -21,7 +21,7 @@ class MigrationRunnerTest {
 
     runner.runMigrations();
 
-    assertEquals(2, scalar(manager, "SELECT COUNT(*) FROM schema_migrations"));
+    assertEquals(3, scalar(manager, "SELECT COUNT(*) FROM schema_migrations"));
     assertEquals(
         17,
         scalar(
@@ -29,6 +29,7 @@ class MigrationRunnerTest {
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"));
     assertEquals(1, scalar(manager, "SELECT COUNT(*) FROM schema_migrations WHERE version='V001'"));
     assertEquals(1, scalar(manager, "SELECT COUNT(*) FROM schema_migrations WHERE version='V002'"));
+    assertEquals(1, scalar(manager, "SELECT COUNT(*) FROM schema_migrations WHERE version='V003'"));
   }
 
   @Test
@@ -36,7 +37,7 @@ class MigrationRunnerTest {
     MigrationRunner runner = new MigrationRunner(manager());
     runner.runMigrations();
     runner.runMigrations();
-    assertEquals(2, scalar(manager(), "SELECT COUNT(*) FROM schema_migrations"));
+    assertEquals(3, scalar(manager(), "SELECT COUNT(*) FROM schema_migrations"));
   }
 
   @Test

@@ -4,6 +4,7 @@ import com.reliefsync.database.DatabaseManager;
 import com.reliefsync.exception.PersistenceException;
 import com.reliefsync.model.Vehicle;
 import com.reliefsync.model.enums.VehicleStatus;
+import com.reliefsync.model.search.VehicleSearchCriteria;
 import com.reliefsync.repository.VehicleRepository;
 import java.sql.*;
 import java.util.*;
@@ -31,6 +32,23 @@ public final class SQLiteVehicleRepository implements VehicleRepository {
   public List<Vehicle> findByStatus(VehicleStatus status) {
     return query(
         "SELECT * FROM vehicles WHERE status=? ORDER BY registration_no", null, status.name());
+  }
+
+  public List<Vehicle> search(VehicleSearchCriteria criteria, int limit) {
+    Objects.requireNonNull(criteria);
+    SqlSearch search = new SqlSearch("SELECT * FROM vehicles WHERE 1=1");
+    search.add(
+        " AND LOWER(registration_no) LIKE LOWER(?)",
+        criteria.registration() == null ? null : "%" + criteria.registration().trim() + "%");
+    search.add(" AND LOWER(type)=LOWER(?)", criteria.type());
+    search.add(" AND status=?", criteria.status() == null ? null : criteria.status().name());
+    search.add(" AND relief_center_id=?", criteria.reliefCenterId());
+    search.add(" AND active=?", criteria.active() == null ? null : criteria.active() ? 1 : 0);
+    try (Connection c = databaseManager.openConnection()) {
+      return search.execute(c, " ORDER BY registration_no", limit, this::map);
+    } catch (SQLException e) {
+      throw fail("search vehicles", e);
+    }
   }
 
   public long save(Vehicle v) {

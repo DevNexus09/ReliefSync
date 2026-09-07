@@ -41,6 +41,10 @@ public final class SceneManager {
     show(View.DASHBOARD);
   }
 
+  public static void showView(View view) {
+    show(view);
+  }
+
   public static boolean isDatabaseConnected() {
     return databaseConnected;
   }
