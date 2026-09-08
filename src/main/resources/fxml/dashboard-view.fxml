@@ -32,10 +32,10 @@
             <Label fx:id="roleLabel" styleClass="session-detail" text="Role:" />
             <Label maxWidth="620"
                    styleClass="screen-subtitle"
-                   text="Manage Phase 3 operational master data through the modules permitted for your role."
+                   text="Manage operational data, create multi-item relief requests, and perform the verification step assigned to your role."
                    textAlignment="CENTER"
                    wrapText="true" />
-            <Label styleClass="status-pill" text="PHASE 3 · CORE MANAGEMENT" />
+            <Label styleClass="status-pill" text="PHASE 4 · REQUEST &amp; VERIFICATION WORKFLOW" />
             <FlowPane fx:id="moduleLinks" alignment="CENTER" hgap="12" vgap="12" maxWidth="760" />
             <Label fx:id="databaseStatusLabel" styleClass="database-status" text="Database: Checking" />
         </VBox>

@@ -63,7 +63,18 @@ Phase 3 adds role-aware core management for:
 - vehicle registration, home-center assignment, and safe manual availability
 - bounded, parameterized repository search across all six modules
 
-The advanced allocation, verification, lifecycle, dispatch, notification, and recovery behavior remains deferred to later phases.
+Phase 4 adds the first complete decision-support workflow:
+
+- in-memory, validated multi-item relief-request drafts
+- probable-duplicate warnings with explicit merge, continue, or cancel decisions
+- a genuine State implementation for all ten request lifecycle states
+- dynamic Normal, High, and Critical verification policies
+- a Chain of Responsibility with one human decision per login/action
+- immutable verification history separated by verification round
+- transactional request submission and verification decisions
+- role-specific request and verification workspaces
+
+Allocation, reservation, dispatch, delivery, notification, recovery, reallocation, and analytics remain deferred to later phases.
 
 ## Prerequisites
 
@@ -102,6 +113,8 @@ All local demo accounts use password `ReliefSync@2026`:
 | `area_coordinator` | Area Coordinator |
 | `center_manager` | Relief Center Manager |
 | `transport` | Transport Coordinator |
+| `volunteer` | Volunteer |
+| `relief_coordinator` | Relief Coordinator |
 
 These are demo credentials only and must not be used for a real deployment. Later runs can use `mvn javafx:run`; the accounts remain in the local database.
 
@@ -115,7 +128,7 @@ The local database is created at `data/reliefsync.db`. Database files are runtim
 JavaFX Views → Controllers → Facade → Services → Repositories → SQLite
 ```
 
-Phase 3 controllers call their application services directly; the planned `ReliefOperationFacade` remains reserved for later cross-service operational workflows. No required GoF pattern is claimed prematurely. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
+Phase 4 implements State for lifecycle-dependent request behavior and Chain of Responsibility for variable-depth human verification. The planned `ReliefOperationFacade` remains reserved for later cross-service operational workflows. See [architecture.md](docs/architecture/architecture.md) for the dependency rules, [scope.md](docs/requirements/scope.md) for scope control, and [requirements](docs/requirements) for the requirements baseline.
 
 ## Development workflow
 

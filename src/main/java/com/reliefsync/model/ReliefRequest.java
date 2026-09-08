@@ -14,5 +14,6 @@ public record ReliefRequest(
     String description,
     LocalDateTime submittedAt,
     LocalDateTime verifiedAt,
+    int verificationRound,
     LocalDateTime createdAt,
     LocalDateTime updatedAt) {}

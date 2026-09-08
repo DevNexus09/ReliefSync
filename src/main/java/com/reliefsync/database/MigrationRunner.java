@@ -19,7 +19,8 @@ public final class MigrationRunner {
       List.of(
           new Migration("V001", "initial schema", "V001__initial_schema.sql"),
           new Migration("V002", "indexes", "V002__indexes.sql"),
-          new Migration("V003", "phase 3 search indexes", "V003__phase3_search_indexes.sql"));
+          new Migration("V003", "phase 3 search indexes", "V003__phase3_search_indexes.sql"),
+          new Migration("V004", "request workflow", "V004__request_workflow.sql"));
 
   private final DatabaseManager databaseManager;
 

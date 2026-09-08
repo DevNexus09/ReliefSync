@@ -40,6 +40,14 @@ public final class ControllerFactory implements Callback<Class<?>, Object> {
     if (controllerType == VehicleController.class)
       return new VehicleController(
           context.vehicleService(), context.sessionManager(), context.authorizationService());
+    if (controllerType == ReliefRequestController.class)
+      return new ReliefRequestController(
+          context.reliefRequestService(),
+          context.verificationService(),
+          context.sessionManager(),
+          context.authorizationService());
+    if (controllerType == VerificationController.class)
+      return new VerificationController(context.verificationService(), context.sessionManager());
     throw new IllegalArgumentException("Unsupported FXML controller: " + controllerType.getName());
   }
 }

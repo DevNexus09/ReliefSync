@@ -57,3 +57,7 @@ Phase 2 contains the versioned base schema, typed domain models, entity-specific
 ## Phase 3 boundary
 
 Phase 3 adds the six core management modules: disaster events, affected areas, relief centers, resources, inventory, and vehicles. It includes bounded repository search, role-aware navigation, lifecycle-safe activation controls, and transactionally audited stock adjustments. Relief requests, verification, allocation, reservation, dispatch, delivery, notifications, reallocation, analytics, and all seven required GoF pattern implementations remain deferred.
+
+## Phase 4 boundary
+
+Phase 4 adds transactional multi-item relief requests, duplicate warnings and safe merge handling, State-controlled request lifecycle behavior, and a role-specific Chain of Responsibility for Normal, High, and Critical verification. Verification rounds preserve prior decisions after return, revision, and resubmission. Allocation, inventory reservation, dispatch, delivery, Observer notifications, Command reversal, concrete Factory Method creators, the operational Facade, reallocation, and analytics remain deferred.

@@ -20,6 +20,8 @@ public final class DatabaseSeeder {
   public static final String CENTER_MANAGER_USERNAME = "center_manager";
   public static final String TRANSPORT_USERNAME = "transport";
   public static final String AREA_COORDINATOR_USERNAME = "area_coordinator";
+  public static final String VOLUNTEER_USERNAME = "volunteer";
+  public static final String RELIEF_COORDINATOR_USERNAME = "relief_coordinator";
   private static final String BASE_SEED = "/database/seed/base_seed.sql";
 
   private final TransactionManager transactionManager;
@@ -44,6 +46,12 @@ public final class DatabaseSeeder {
               "TRANSPORT_COORDINATOR");
           seedUser(
               connection, "Demo Area Coordinator", AREA_COORDINATOR_USERNAME, "AREA_COORDINATOR");
+          seedUser(connection, "Demo Volunteer", VOLUNTEER_USERNAME, "VOLUNTEER");
+          seedUser(
+              connection,
+              "Demo Relief Coordinator",
+              RELIEF_COORDINATOR_USERNAME,
+              "RELIEF_COORDINATOR");
           return null;
         });
   }

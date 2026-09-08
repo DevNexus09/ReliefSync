@@ -15,23 +15,36 @@ public final class AuthorizationService {
     policy.put(
         Role.RELIEF_COORDINATOR,
         EnumSet.of(
-            Permission.VIEW_DISASTERS, Permission.VIEW_AFFECTED_AREAS,
-            Permission.VIEW_RELIEF_CENTERS, Permission.VIEW_RESOURCES,
-            Permission.VIEW_INVENTORY, Permission.VERIFY_RELIEF_REQUEST,
-            Permission.VIEW_ALLOCATIONS, Permission.MANAGE_ALLOCATIONS,
-            Permission.VIEW_DISPATCHES, Permission.VIEW_REPORTS));
+            Permission.VIEW_DISASTERS,
+            Permission.VIEW_AFFECTED_AREAS,
+            Permission.VIEW_RELIEF_CENTERS,
+            Permission.VIEW_RESOURCES,
+            Permission.VIEW_INVENTORY,
+            Permission.VIEW_RELIEF_REQUESTS,
+            Permission.VERIFY_RELIEF_REQUEST,
+            Permission.VIEW_ALLOCATIONS,
+            Permission.MANAGE_ALLOCATIONS,
+            Permission.VIEW_DISPATCHES,
+            Permission.VIEW_REPORTS));
     policy.put(
         Role.AREA_COORDINATOR,
         EnumSet.of(
-            Permission.VIEW_DISASTERS, Permission.VIEW_AFFECTED_AREAS,
-            Permission.MANAGE_AFFECTED_AREAS, Permission.CREATE_RELIEF_REQUEST,
-            Permission.VIEW_ALLOCATIONS, Permission.VIEW_DISPATCHES));
+            Permission.VIEW_DISASTERS,
+            Permission.VIEW_AFFECTED_AREAS,
+            Permission.MANAGE_AFFECTED_AREAS,
+            Permission.VIEW_RESOURCES,
+            Permission.VIEW_RELIEF_REQUESTS,
+            Permission.CREATE_RELIEF_REQUEST,
+            Permission.VERIFY_RELIEF_REQUEST,
+            Permission.VIEW_ALLOCATIONS,
+            Permission.VIEW_DISPATCHES));
     policy.put(
         Role.VOLUNTEER,
         EnumSet.of(
             Permission.VIEW_DISASTERS,
             Permission.VIEW_AFFECTED_AREAS,
-            Permission.CREATE_RELIEF_REQUEST));
+            Permission.VIEW_RELIEF_REQUESTS,
+            Permission.VERIFY_RELIEF_REQUEST));
     policy.put(
         Role.RELIEF_CENTER_MANAGER,
         EnumSet.of(

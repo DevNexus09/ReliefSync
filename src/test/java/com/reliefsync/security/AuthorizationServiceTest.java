@@ -20,7 +20,9 @@ class AuthorizationServiceTest {
   @Test
   void givenRolePolicy_whenAllowedAndForbiddenActionsChecked_thenPolicyIsCentralized() {
     UserSession volunteer = session(Role.VOLUNTEER);
-    assertTrue(authorization.can(volunteer, Permission.CREATE_RELIEF_REQUEST));
+    assertTrue(authorization.can(volunteer, Permission.VIEW_RELIEF_REQUESTS));
+    assertTrue(authorization.can(volunteer, Permission.VERIFY_RELIEF_REQUEST));
+    assertFalse(authorization.can(volunteer, Permission.CREATE_RELIEF_REQUEST));
     assertFalse(authorization.can(volunteer, Permission.MANAGE_USERS));
     assertDoesNotThrow(() -> authorization.require(volunteer, Permission.VIEW_AFFECTED_AREAS));
     assertThrows(

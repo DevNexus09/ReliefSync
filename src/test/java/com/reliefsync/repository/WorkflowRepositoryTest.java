@@ -49,6 +49,7 @@ class WorkflowRepositoryTest {
                 fixture.userId,
                 VerificationDecision.APPROVED,
                 "Verified",
+                1,
                 LocalDateTime.now()));
     assertTrue(verifications.findById(verificationId).isPresent());
 
@@ -327,6 +328,7 @@ class WorkflowRepositoryTest {
                     "Need food",
                     now,
                     null,
+                    1,
                     now,
                     now));
     return new Fixture(userId, areaId, centerId, resourceId, vehicleId, requestId);

@@ -10,4 +10,5 @@ public record VerificationRecord(
     long reviewerId,
     VerificationDecision decision,
     String reason,
+    int verificationRound,
     LocalDateTime createdAt) {}

@@ -48,6 +48,8 @@ public class DashboardController {
     addModule("Resources", View.RESOURCES, Permission.VIEW_RESOURCES, session);
     addModule("Inventory", View.INVENTORY, Permission.VIEW_INVENTORY, session);
     addModule("Vehicles", View.VEHICLES, Permission.VIEW_VEHICLES, session);
+    addModule("Relief Requests", View.RELIEF_REQUESTS, Permission.VIEW_RELIEF_REQUESTS, session);
+    addModule("Verification Queue", View.VERIFICATION, Permission.VERIFY_RELIEF_REQUEST, session);
   }
 
   private void addModule(String text, View view, Permission permission, UserSession session) {

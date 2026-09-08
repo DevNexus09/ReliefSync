@@ -51,7 +51,7 @@ FXML and CSS describe the interface. Controllers gather input, display results, 
 
 ### Services and patterns
 
-Services own validation, authorization, transactions, and business workflows. During Phase 3, core management controllers call one service directly; the facade remains reserved for later multi-service workflows. Strategy, State, Chain of Responsibility, Observer, Command, Factory Method, and Facade components will be introduced only with the corresponding business problem.
+Services own validation, authorization, transactions, and business workflows. Phase 4 uses State objects to authorize lifecycle transitions and a Chain of Responsibility to locate and validate one human verification step per action. Controllers still call application services directly; the facade remains reserved for later multi-service workflows. Strategy, Observer, Command, Factory Method, and Facade will be introduced only with their corresponding business problems.
 
 ### Repositories
 
@@ -59,14 +59,14 @@ Repositories will execute persistence operations and map database rows to models
 
 ### Database
 
-SQLite persists the base schema and Phase 3 search indexes. `DatabaseManager` configures every connection, `MigrationRunner` applies versioned classpath migrations transactionally, and `TransactionManager` provides a reusable atomic-work boundary. Inventory adjustments and their audit events share one transaction-scoped repository context. Demo seeding is opt-in and transactionally repeatable.
+SQLite persists the base schema, search indexes, verification rounds, request items, and immutable verification history. `DatabaseManager` configures every connection, `MigrationRunner` applies versioned classpath migrations transactionally, and `TransactionManager` provides reusable atomic-work boundaries. Request header/items and verification decision/state updates each share one transaction-scoped repository context. Demo seeding is opt-in and transactionally repeatable.
 
 ## Dependency rules
 
 Allowed direction:
 
 ```text
-Controller → Service → Repository → Database (single-service Phase 3 operations)
+Controller → Service → Pattern → Repository → Database (Phase 4 workflow operations)
 Controller → Facade → Service → Repository → Database (later cross-service workflows)
 ```
 
@@ -89,9 +89,9 @@ Forbidden dependencies:
 
 `DatabaseConfig` resolves the application-local database path. `DatabaseManager` creates its parent directory, opens JDBC connections, enables SQLite foreign keys, and configures a busy timeout per connection. `DatabaseHealthCheck` owns `SELECT 1`. Callers use try-with-resources so connections, statements, and result sets close deterministically.
 
-## Decisions deferred beyond Phase 3
+## Decisions deferred beyond Phase 4
 
 - Allocation contracts and formulas
-- Request, allocation, and dispatch lifecycles
-- The seven required GoF pattern implementations
-- Relief-request workflow, allocation, dispatch, notifications, analytics, and reallocation behavior
+- Allocation and dispatch lifecycle orchestration
+- Strategy, Observer, Command, Factory Method, and Facade implementations
+- Allocation, reservation, dispatch, notifications, analytics, and reallocation behavior

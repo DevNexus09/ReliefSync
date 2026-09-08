@@ -8,7 +8,9 @@ public enum View {
   RELIEF_CENTERS("/fxml/relief-center-view.fxml", "ReliefSync | Relief Centers"),
   RESOURCES("/fxml/resource-view.fxml", "ReliefSync | Resources"),
   INVENTORY("/fxml/inventory-view.fxml", "ReliefSync | Inventory"),
-  VEHICLES("/fxml/vehicle-view.fxml", "ReliefSync | Vehicles");
+  VEHICLES("/fxml/vehicle-view.fxml", "ReliefSync | Vehicles"),
+  RELIEF_REQUESTS("/fxml/relief-request-view.fxml", "ReliefSync | Relief Requests"),
+  VERIFICATION("/fxml/verification-view.fxml", "ReliefSync | Verification Queue");
 
   private final String fxmlPath;
   private final String windowTitle;

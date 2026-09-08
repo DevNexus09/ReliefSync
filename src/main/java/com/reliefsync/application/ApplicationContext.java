@@ -6,6 +6,9 @@ import com.reliefsync.database.DatabaseSeeder;
 import com.reliefsync.database.MigrationRunner;
 import com.reliefsync.database.SchemaInitializer;
 import com.reliefsync.database.TransactionManager;
+import com.reliefsync.model.verification.VerificationPolicyConfig;
+import com.reliefsync.pattern.chain.*;
+import com.reliefsync.pattern.state.ReliefRequestStateRegistry;
 import com.reliefsync.repository.*;
 import com.reliefsync.repository.sqlite.*;
 import com.reliefsync.security.AuthorizationService;
@@ -31,6 +34,8 @@ public final class ApplicationContext {
   private final ResourceService resourceService;
   private final InventoryService inventoryService;
   private final VehicleService vehicleService;
+  private final ReliefRequestService reliefRequestService;
+  private final VerificationService verificationService;
   private final ControllerFactory controllerFactory;
 
   public ApplicationContext() {
@@ -52,6 +57,13 @@ public final class ApplicationContext {
     ResourceRepository resources = new SQLiteResourceRepository(databaseManager);
     CenterInventoryRepository inventory = new SQLiteCenterInventoryRepository(databaseManager);
     VehicleRepository vehicles = new SQLiteVehicleRepository(databaseManager);
+    ReliefRequestRepository requests = new SQLiteReliefRequestRepository(databaseManager);
+    ReliefRequestItemRepository requestItems =
+        new SQLiteReliefRequestItemRepository(databaseManager);
+    VerificationRecordRepository verificationRecords =
+        new SQLiteVerificationRecordRepository(databaseManager);
+    RequestWorkflowTransactionRepository requestTransactions =
+        new SQLiteRequestWorkflowTransactionRepository(transactionManager);
     this.disasterEventService =
         new DisasterEventService(disasters, authorizationService, new DisasterEventValidator());
     this.affectedAreaService =
@@ -71,6 +83,31 @@ public final class ApplicationContext {
             authorizationService);
     this.vehicleService =
         new VehicleService(vehicles, centers, authorizationService, new VehicleValidator());
+    ReliefRequestStateRegistry requestStates = new ReliefRequestStateRegistry();
+    ReliefRequestValidator requestValidator =
+        new ReliefRequestValidator(disasters, areas, resources);
+    DuplicateRequestDetector duplicateDetector =
+        new DuplicateRequestDetector(requests, requestItems);
+    this.reliefRequestService =
+        new ReliefRequestService(
+            requests,
+            requestItems,
+            requestTransactions,
+            requestValidator,
+            duplicateDetector,
+            authorizationService,
+            requestStates);
+    this.verificationService =
+        new VerificationService(
+            requests,
+            requestItems,
+            areas,
+            verificationRecords,
+            requestTransactions,
+            authorizationService,
+            new VerificationPolicy(VerificationPolicyConfig.defaults()),
+            new VerificationChainBuilder(),
+            requestStates);
     MigrationRunner migrationRunner = new MigrationRunner(databaseManager);
     DatabaseSeeder databaseSeeder = new DatabaseSeeder(transactionManager, passwordHasher);
     this.schemaInitializer = new SchemaInitializer(migrationRunner, databaseSeeder);
@@ -136,5 +173,13 @@ public final class ApplicationContext {
 
   public VehicleService vehicleService() {
     return vehicleService;
+  }
+
+  public ReliefRequestService reliefRequestService() {
+    return reliefRequestService;
+  }
+
+  public VerificationService verificationService() {
+    return verificationService;
   }
 }
