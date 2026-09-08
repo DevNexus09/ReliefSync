@@ -1,0 +1,88 @@
+/* ReliefSync application theme */
+
+.root {
+  -fx-font-family: "Segoe UI", sans-serif;
+  -fx-font-size: 13px;
+  -fx-background-color: #eef2f8;
+}
+
+.heading {
+  -fx-font-size: 18px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #1f2a3a;
+}
+
+.muted { -fx-text-fill: #66738a; }
+.error-text { -fx-text-fill: #d64545; }
+
+/* Top bar */
+.top-bar { -fx-background-color: linear-gradient(to right, #16324f, #2d5c8f); }
+.top-bar .label { -fx-text-fill: #e8eef7; }
+.app-name { -fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: white; }
+.logout-button {
+  -fx-background-color: transparent;
+  -fx-border-color: #b9c6d9;
+  -fx-border-radius: 7;
+  -fx-text-fill: white;
+}
+.logout-button:hover { -fx-background-color: rgba(255,255,255,0.15); }
+
+/* Sidebar navigation */
+.sidebar { -fx-background-color: #16233a; }
+.nav-button {
+  -fx-background-color: transparent;
+  -fx-text-fill: #b9c6d9;
+  -fx-alignment: center-left;
+  -fx-padding: 9 12 9 12;
+  -fx-background-radius: 8;
+  -fx-cursor: hand;
+}
+.nav-button:hover { -fx-background-color: #24344f; -fx-text-fill: white; }
+.nav-button.active { -fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold; }
+
+/* Cards */
+.card {
+  -fx-background-color: white;
+  -fx-background-radius: 10;
+  -fx-effect: dropshadow(gaussian, rgba(22,35,58,0.10), 12, 0, 0, 3);
+}
+.stat-value { -fx-font-size: 30px; -fx-font-weight: bold; }
+.stat-caption { -fx-text-fill: #66738a; }
+
+/* Buttons */
+.button { -fx-background-radius: 7; -fx-cursor: hand; -fx-padding: 6 12 6 12; }
+.primary-button { -fx-background-color: #3b82f6; -fx-text-fill: white; -fx-font-weight: bold; }
+.primary-button:hover { -fx-background-color: #2f6fd8; }
+.danger-button { -fx-background-color: #d64545; -fx-text-fill: white; -fx-font-weight: bold; }
+.danger-button:hover { -fx-background-color: #b93a3a; }
+
+/* Status badges */
+.badge {
+  -fx-text-fill: white;
+  -fx-font-size: 11px;
+  -fx-font-weight: bold;
+  -fx-padding: 2 9 2 9;
+  -fx-background-radius: 10;
+}
+
+/* Tables */
+.table-view {
+  -fx-background-color: white;
+  -fx-background-radius: 8;
+  -fx-border-color: #dde4ee;
+  -fx-border-radius: 8;
+}
+.table-view .column-header-background { -fx-background-color: #f2f5fa; }
+.table-view .column-header .label { -fx-text-fill: #46536b; -fx-font-weight: bold; }
+.table-row-cell:selected { -fx-background-color: #d7e6fb; }
+.table-row-cell:selected .text { -fx-fill: #16233a; }
+
+/* Titled panes and inputs */
+.titled-pane > .title { -fx-background-color: #f2f5fa; -fx-font-weight: bold; }
+.titled-pane > .content { -fx-background-color: white; }
+.text-field, .password-field, .combo-box { -fx-background-radius: 7; }
+.tab-pane .tab-header-background { -fx-background-color: #eef2f8; }
+
+/* Login */
+.login-background { -fx-background-color: linear-gradient(to bottom right, #16324f, #2d5c8f); }
+.login-title { -fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #16324f; }
