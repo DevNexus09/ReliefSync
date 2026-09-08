@@ -1,0 +1,10 @@
+target/
+data/
+*.db
+*.db-journal
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
