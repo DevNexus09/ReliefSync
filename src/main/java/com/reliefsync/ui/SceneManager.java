@@ -21,7 +21,7 @@ public final class SceneManager {
         // Drop the main window's minimums first, or the login card floats in empty space.
         stage.setMinWidth(0);
         stage.setMinHeight(0);
-        stage.setScene(styled(new LoginPane(), 560, 470));
+        stage.setScene(styled(new LoginPane(), 980, 720));
         stage.sizeToScene();
         stage.centerOnScreen();
     }
