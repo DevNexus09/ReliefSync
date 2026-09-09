@@ -1,9 +1,15 @@
 package com.reliefsync.ui;
 
+import com.reliefsync.facade.ReliefOperationFacade;
 import com.reliefsync.model.AffectedArea;
 import com.reliefsync.model.ReliefCenter;
 import com.reliefsync.model.Resource;
+import com.reliefsync.model.Vehicle;
+import com.reliefsync.model.VehicleStatus;
+import com.reliefsync.service.AccessControl;
+import com.reliefsync.service.Feature;
 import com.reliefsync.service.MasterDataService;
+import com.reliefsync.service.Session;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.collections.FXCollections;
@@ -20,18 +26,24 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /**
- * CRUD screens for the three master-data entities. Records are deactivated
+ * CRUD screens for master-data entities. Records are deactivated
  * rather than deleted so historical requests keep their references.
  */
 class MasterDataPane extends ContentPane {
 
     private final MasterDataService service = new MasterDataService();
+    private final ReliefOperationFacade facade = new ReliefOperationFacade();
     private final List<Runnable> loaders = new ArrayList<>();
 
     MasterDataPane() {
         TabPane tabs = new TabPane();
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        tabs.getTabs().addAll(areaTab(), centerTab(), resourceTab());
+        if (AccessControl.can(Session.user().role(), Feature.MASTER_DATA)) {
+            tabs.getTabs().addAll(areaTab(), centerTab(), resourceTab());
+        }
+        if (AccessControl.can(Session.user().role(), Feature.VEHICLES)) {
+            tabs.getTabs().add(vehicleTab());
+        }
         VBox box = new VBox(8, Ui.heading("Master Data"), tabs);
         setCenter(box);
     }
@@ -243,6 +255,78 @@ class MasterDataPane extends ContentPane {
         return buildTab("Resources", search, table,
                 new HBox(8, name, unit, threshold),
                 new HBox(8, newButton, save, deactivate, activate));
+    }
+
+    // ---- Vehicles ----
+
+    private Tab vehicleTab() {
+        TableView<Vehicle> table = new TableView<>();
+        table.getColumns().addAll(List.of(
+                Ui.col("Registration", Vehicle::registrationNumber, 170),
+                Ui.col("Type", Vehicle::vehicleType, 150),
+                Ui.col("Capacity units", Vehicle::capacity, 120),
+                Ui.badgeCol("Status", Vehicle::status, 110)));
+
+        TextField search = new TextField();
+        search.setPromptText("Search registration or type");
+        Runnable load = () -> table.setItems(FXCollections.observableArrayList(
+                facade.vehicles(Session.user(), search.getText())));
+        loaders.add(load);
+        search.textProperty().addListener((obs, oldValue, newValue) -> load.run());
+
+        TextField registration = new TextField();
+        registration.setPromptText("Registration number");
+        TextField type = new TextField();
+        type.setPromptText("Vehicle type");
+        TextField capacity = new TextField();
+        capacity.setPromptText("Capacity units");
+        capacity.setPrefWidth(120);
+
+        final Long[] selectedId = {null};
+        table.getSelectionModel().selectedItemProperty().addListener((obs, oldVehicle, vehicle) -> {
+            if (vehicle != null) {
+                selectedId[0] = vehicle.id();
+                registration.setText(vehicle.registrationNumber());
+                type.setText(vehicle.vehicleType());
+                capacity.setText(String.valueOf(vehicle.capacity()));
+            }
+        });
+
+        Button newButton = new Button("New");
+        newButton.setOnAction(e -> {
+            selectedId[0] = null;
+            table.getSelectionModel().clearSelection();
+            registration.clear();
+            type.clear();
+            capacity.clear();
+        });
+        Button save = Ui.primary(new Button("Save"));
+        save.setOnAction(e -> Ui.guarded(() -> {
+            facade.saveVehicle(Session.user(), selectedId[0], registration.getText(), type.getText(),
+                    Ui.intOf(capacity, "Vehicle capacity"));
+            load.run();
+        }));
+        Button available = new Button("Set available");
+        available.setOnAction(e -> setVehicleStatus(table, VehicleStatus.AVAILABLE, load));
+        Button maintenance = new Button("Set maintenance");
+        maintenance.setOnAction(e -> setVehicleStatus(table, VehicleStatus.MAINTENANCE, load));
+        Button deactivate = Ui.danger(new Button("Deactivate"));
+        deactivate.setOnAction(e -> setVehicleStatus(table, VehicleStatus.INACTIVE, load));
+
+        return buildTab("Vehicles", search, table,
+                new HBox(8, registration, type, capacity),
+                new HBox(8, newButton, save, available, maintenance, deactivate));
+    }
+
+    private void setVehicleStatus(TableView<Vehicle> table, VehicleStatus status, Runnable load) {
+        Ui.guarded(() -> {
+            Vehicle selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                throw new IllegalArgumentException("Select a vehicle in the table first");
+            }
+            facade.setVehicleStatus(Session.user(), selected.id(), status);
+            load.run();
+        });
     }
 
     private Tab buildTab(String title, TextField search, TableView<?> table, HBox form, HBox buttons) {

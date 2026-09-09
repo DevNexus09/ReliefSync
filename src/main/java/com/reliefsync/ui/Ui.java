@@ -72,13 +72,13 @@ final class Ui {
     private static String badgeColor(String value) {
         return switch (value) {
             case "DRAFT" -> "#8a93a3";
-            case "SUBMITTED", "LOW", "HIGH" -> "#d98f0b";
+            case "SUBMITTED", "LOW", "HIGH", "MAINTENANCE" -> "#d98f0b";
             case "VERIFIED" -> "#3b82f6";
             case "REJECTED", "OUT OF STOCK", "CRITICAL" -> "#d64545";
             case "ALLOCATED" -> "#8b5cf6";
-            case "DISPATCHED" -> "#0e9aa7";
-            case "DELIVERED", "OK" -> "#1b9e4b";
-            case "CANCELLED" -> "#5b6270";
+            case "DISPATCHED", "IN_TRANSIT" -> "#0e9aa7";
+            case "DELIVERED", "OK", "AVAILABLE" -> "#1b9e4b";
+            case "CANCELLED", "INACTIVE" -> "#5b6270";
             default -> "#64748b";
         };
     }

@@ -1,7 +1,10 @@
 package com.reliefsync.facade;
 
 import com.reliefsync.model.Allocation;
+import com.reliefsync.model.AllocationEvent;
 import com.reliefsync.model.DraftItem;
+import com.reliefsync.model.DispatchManifest;
+import com.reliefsync.model.DispatchManifestItem;
 import com.reliefsync.model.Priority;
 import com.reliefsync.model.RequestItem;
 import com.reliefsync.model.RequestRow;
@@ -9,15 +12,22 @@ import com.reliefsync.model.RequestStatus;
 import com.reliefsync.model.StatusChange;
 import com.reliefsync.model.User;
 import com.reliefsync.model.Verification;
+import com.reliefsync.model.Vehicle;
+import com.reliefsync.model.VehicleStatus;
 import com.reliefsync.repository.AllocationRepository;
+import com.reliefsync.repository.DispatchManifestRepository;
 import com.reliefsync.repository.RequestRepository;
 import com.reliefsync.repository.VerificationRepository;
 import com.reliefsync.service.AllocationResult;
 import com.reliefsync.service.AllocationService;
+import com.reliefsync.service.CancellationResult;
+import com.reliefsync.service.DispatchService;
 import com.reliefsync.service.RequestService;
+import com.reliefsync.service.VehicleService;
 import com.reliefsync.strategy.AllocationStrategies;
 import com.reliefsync.verification.VerificationOutcome;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Facade over the cross-service relief workflow. The UI talks to this single
@@ -28,9 +38,12 @@ public class ReliefOperationFacade {
 
     private final RequestService requestService = new RequestService();
     private final AllocationService allocationService = new AllocationService();
+    private final DispatchService dispatchService = new DispatchService();
+    private final VehicleService vehicleService = new VehicleService();
     private final RequestRepository requests = new RequestRepository();
     private final VerificationRepository verifications = new VerificationRepository();
     private final AllocationRepository allocations = new AllocationRepository();
+    private final DispatchManifestRepository manifests = new DispatchManifestRepository();
 
     // ---- Request workflow ----
 
@@ -50,8 +63,12 @@ public class ReliefOperationFacade {
         return requestService.decideVerification(actor, requestId, approve, comment);
     }
 
-    public void cancel(User actor, long requestId) {
-        requestService.cancel(actor, requestId);
+    public boolean canCancel(User actor, long requestId) {
+        return requestService.canCancel(actor, requestId);
+    }
+
+    public CancellationResult cancel(User actor, long requestId) {
+        return requestService.cancel(actor, requestId);
     }
 
     // ---- Allocation workflow ----
@@ -68,12 +85,43 @@ public class ReliefOperationFacade {
         return allocationService.allocate(actor, requestId, strategyName);
     }
 
-    public void dispatch(User actor, long requestId) {
-        allocationService.dispatch(actor, requestId);
+    public AllocationResult reallocate(User actor, long requestId, String strategyName) {
+        return allocationService.reallocate(actor, requestId, strategyName);
+    }
+
+    public void dispatch(User actor, long requestId, long vehicleId, String driverName) {
+        dispatchService.dispatch(actor, requestId, vehicleId, driverName);
     }
 
     public void deliver(User actor, long requestId) {
-        allocationService.deliver(actor, requestId);
+        dispatchService.deliver(actor, requestId);
+    }
+
+    // ---- Vehicles and dispatch manifests ----
+
+    public List<Vehicle> vehicles(User actor, String search) {
+        return vehicleService.search(actor, search);
+    }
+
+    public List<Vehicle> availableVehicles(User actor) {
+        return vehicleService.available(actor);
+    }
+
+    public long saveVehicle(User actor, Long idOrNull, String registrationNumber,
+                            String vehicleType, int capacity) {
+        return vehicleService.save(actor, idOrNull, registrationNumber, vehicleType, capacity);
+    }
+
+    public void setVehicleStatus(User actor, long vehicleId, VehicleStatus status) {
+        vehicleService.setStatus(actor, vehicleId, status);
+    }
+
+    public Optional<DispatchManifest> manifest(long requestId) {
+        return manifests.findByRequest(requestId);
+    }
+
+    public List<DispatchManifestItem> manifestItems(long manifestId) {
+        return manifests.items(manifestId);
     }
 
     // ---- Read models for the UI ----
@@ -100,5 +148,9 @@ public class ReliefOperationFacade {
 
     public List<Allocation> allocations(long requestId) {
         return allocations.forRequest(requestId);
+    }
+
+    public List<AllocationEvent> allocationEvents(long requestId) {
+        return allocations.eventsForRequest(requestId);
     }
 }

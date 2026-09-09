@@ -2,10 +2,14 @@ package com.reliefsync.service;
 
 import com.reliefsync.db.Database;
 import com.reliefsync.model.DraftItem;
+import com.reliefsync.model.Allocation;
+import com.reliefsync.model.AllocationEventType;
 import com.reliefsync.model.Priority;
 import com.reliefsync.model.ReliefRequest;
 import com.reliefsync.model.RequestStatus;
 import com.reliefsync.model.User;
+import com.reliefsync.repository.AllocationRepository;
+import com.reliefsync.repository.InventoryRepository;
 import com.reliefsync.repository.RequestRepository;
 import com.reliefsync.repository.VerificationRepository;
 import com.reliefsync.state.RequestState;
@@ -26,6 +30,8 @@ public class RequestService {
 
     private final RequestRepository requests = new RequestRepository();
     private final VerificationRepository verifications = new VerificationRepository();
+    private final AllocationRepository allocations = new AllocationRepository();
+    private final InventoryRepository inventory = new InventoryRepository();
 
     /** True when the area already has an open request (probable duplicate). */
     public boolean hasOpenRequestForArea(long areaId) {
@@ -87,13 +93,50 @@ public class RequestService {
         });
     }
 
-    public void cancel(User actor, long requestId) {
+    public boolean canCancel(User actor, long requestId) {
+        ReliefRequest request = load(requestId);
+        if (request.createdBy() != actor.id() && actor.role() != com.reliefsync.model.Role.ADMIN) {
+            return false;
+        }
+        try {
+            RequestStates.of(request.status()).cancel();
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    public CancellationResult cancel(User actor, long requestId) {
         ReliefRequest request = load(requestId);
         if (request.createdBy() != actor.id() && actor.role() != com.reliefsync.model.Role.ADMIN) {
             throw new IllegalStateException("Only the creator or an administrator can cancel a request");
         }
         RequestStatus next = RequestStates.of(request.status()).cancel();
-        transition(request, next, actor);
+        if (request.status() != RequestStatus.ALLOCATED) {
+            transition(request, next, actor);
+            return new CancellationResult(0, 0);
+        }
+
+        return Database.getInstance().inTransaction(c -> {
+            int releasedCount = 0;
+            long releasedQuantity = 0;
+            String timestamp = now();
+            for (Allocation allocation : allocations.activeForRequest(requestId)) {
+                if (!allocations.markReleased(allocation.id(), actor.id(), timestamp)) {
+                    throw new IllegalStateException("Allocation #" + allocation.id() + " was already released");
+                }
+                inventory.adjust(allocation.centerId(), allocation.resourceId(), allocation.quantity());
+                requests.addToItemAllocated(requestId, allocation.resourceId(), -allocation.quantity());
+                allocations.addEvent(requestId, allocation.id(), AllocationEventType.RELEASED,
+                        allocation.centerId(), allocation.resourceId(), allocation.quantity(), actor.id(), timestamp);
+                releasedCount++;
+                releasedQuantity += allocation.quantity();
+            }
+            requests.updateStatus(requestId, next);
+            requests.addHistory(requestId, request.status().name(), next.name(), actor.fullName(), timestamp);
+            request.setStatus(next);
+            return new CancellationResult(releasedCount, releasedQuantity);
+        });
     }
 
     ReliefRequest load(long requestId) {

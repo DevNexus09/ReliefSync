@@ -12,7 +12,8 @@ public final class AccessControl {
             Role.ADMIN, EnumSet.allOf(Feature.class),
             Role.AREA_COORDINATOR, EnumSet.of(Feature.DASHBOARD, Feature.REQUESTS, Feature.VERIFY, Feature.REPORTS),
             Role.CENTER_MANAGER, EnumSet.of(Feature.DASHBOARD, Feature.MASTER_DATA, Feature.INVENTORY, Feature.REPORTS),
-            Role.TRANSPORT_COORDINATOR, EnumSet.of(Feature.DASHBOARD, Feature.TRANSPORT, Feature.REPORTS),
+            Role.TRANSPORT_COORDINATOR, EnumSet.of(
+                    Feature.DASHBOARD, Feature.TRANSPORT, Feature.VEHICLES, Feature.REPORTS),
             Role.VOLUNTEER, EnumSet.of(Feature.DASHBOARD, Feature.REQUESTS),
             Role.RELIEF_COORDINATOR, EnumSet.of(Feature.DASHBOARD, Feature.VERIFY, Feature.ALLOCATE, Feature.REPORTS));
 

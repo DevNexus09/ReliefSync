@@ -2,6 +2,7 @@ package com.reliefsync.service;
 
 import com.reliefsync.db.Database;
 import com.reliefsync.model.PlannedAllocation;
+import com.reliefsync.model.AllocationEventType;
 import com.reliefsync.model.ReliefRequest;
 import com.reliefsync.model.RequestItem;
 import com.reliefsync.model.RequestStatus;
@@ -41,6 +42,22 @@ public class AllocationService {
         AccessControl.require(actor, Feature.ALLOCATE);
         ReliefRequest request = requestService.load(requestId);
         RequestStatus next = RequestStates.of(request.status()).allocate();
+        return reserve(actor, request, strategyName, AllocationEventType.ALLOCATED, next, true);
+    }
+
+    public AllocationResult reallocate(User actor, long requestId, String strategyName) {
+        AccessControl.require(actor, Feature.ALLOCATE);
+        ReliefRequest request = requestService.load(requestId);
+        RequestStatus next = RequestStates.of(request.status()).reallocate();
+        if (requests.items(requestId).stream().noneMatch(item -> item.outstanding() > 0)) {
+            throw new IllegalStateException("Request #" + requestId + " is already fully allocated");
+        }
+        return reserve(actor, request, strategyName, AllocationEventType.REALLOCATED, next, false);
+    }
+
+    private AllocationResult reserve(User actor, ReliefRequest request, String strategyName,
+                                     AllocationEventType eventType, RequestStatus next,
+                                     boolean recordStatusChange) {
         AllocationStrategy strategy = AllocationStrategies.byName(strategyName);
         return Database.getInstance().inTransaction(c -> {
             List<RequestItem> items = requests.items(request.id());
@@ -48,31 +65,25 @@ public class AllocationService {
             if (lines.isEmpty()) {
                 throw new IllegalStateException("No stock is available for any requested item");
             }
+            String timestamp = RequestService.now();
             for (PlannedAllocation line : lines) {
+                if (line.quantity() <= 0) {
+                    throw new IllegalStateException("Allocation quantities must be greater than zero");
+                }
                 inventory.decrement(line.centerId(), line.resourceId(), line.quantity());
-                allocations.insert(request.id(), line.centerId(), line.resourceId(),
+                long allocationId = allocations.insert(request.id(), line.centerId(), line.resourceId(),
                         line.quantity(), strategy.name());
                 requests.addToItemAllocated(request.id(), line.resourceId(), line.quantity());
+                allocations.addEvent(request.id(), allocationId, eventType,
+                        line.centerId(), line.resourceId(), line.quantity(), actor.id(), timestamp);
             }
-            requests.updateStatus(request.id(), next);
-            requests.addHistory(request.id(), request.status().name(), next.name(),
-                    actor.fullName(), RequestService.now());
+            if (recordStatusChange) {
+                requests.updateStatus(request.id(), next);
+                requests.addHistory(request.id(), request.status().name(), next.name(),
+                        actor.fullName(), timestamp);
+            }
             return new AllocationResult(lines, shortages(items, lines));
         });
-    }
-
-    public void dispatch(User actor, long requestId) {
-        AccessControl.require(actor, Feature.TRANSPORT);
-        ReliefRequest request = requestService.load(requestId);
-        RequestStatus next = RequestStates.of(request.status()).dispatch();
-        requestService.transition(request, next, actor);
-    }
-
-    public void deliver(User actor, long requestId) {
-        AccessControl.require(actor, Feature.TRANSPORT);
-        ReliefRequest request = requestService.load(requestId);
-        RequestStatus next = RequestStates.of(request.status()).deliver();
-        requestService.transition(request, next, actor);
     }
 
     private static List<Shortage> shortages(List<RequestItem> items, List<PlannedAllocation> lines) {

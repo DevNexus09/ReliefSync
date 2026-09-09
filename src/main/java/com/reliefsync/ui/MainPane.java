@@ -53,7 +53,8 @@ class MainPane extends BorderPane {
         if (AccessControl.can(user.role(), Feature.DASHBOARD)) {
             dashboardButton = addButton(nav, "Dashboard", dashboard);
         }
-        if (AccessControl.can(user.role(), Feature.MASTER_DATA)) {
+        if (AccessControl.can(user.role(), Feature.MASTER_DATA)
+                || AccessControl.can(user.role(), Feature.VEHICLES)) {
             addButton(nav, "Master Data", new MasterDataPane());
         }
         if (AccessControl.can(user.role(), Feature.INVENTORY)) {

@@ -29,6 +29,11 @@ public abstract class RequestState {
         throw deny("allocate");
     }
 
+    /** ALLOCATED -> ALLOCATED while outstanding quantities remain. */
+    public RequestStatus reallocate() {
+        throw deny("reallocate");
+    }
+
     /** ALLOCATED -> DISPATCHED */
     public RequestStatus dispatch() {
         throw deny("dispatch");

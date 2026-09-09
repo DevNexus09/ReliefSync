@@ -112,6 +112,61 @@ final class Migrations {
                     )""",
                     "CREATE INDEX idx_requests_status ON relief_requests(status)",
                     "CREATE INDEX idx_inventory_center ON inventory(center_id)"
+            ),
+            List.of(
+                    "ALTER TABLE allocations ADD COLUMN active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))",
+                    "ALTER TABLE allocations ADD COLUMN released_at TEXT",
+                    "ALTER TABLE allocations ADD COLUMN released_by INTEGER REFERENCES users(id)",
+                    """
+                    CREATE TABLE allocation_events (
+                      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                      request_id    INTEGER NOT NULL REFERENCES relief_requests(id) ON DELETE CASCADE,
+                      allocation_id INTEGER REFERENCES allocations(id) ON DELETE SET NULL,
+                      event_type    TEXT NOT NULL CHECK (event_type IN ('ALLOCATED','REALLOCATED','RELEASED')),
+                      center_id     INTEGER NOT NULL REFERENCES relief_centers(id),
+                      resource_id   INTEGER NOT NULL REFERENCES resources(id),
+                      quantity      INTEGER NOT NULL CHECK (quantity > 0),
+                      actor_id      INTEGER NOT NULL REFERENCES users(id),
+                      occurred_at   TEXT NOT NULL
+                    )
+                    """,
+                    "CREATE INDEX idx_allocations_request_active ON allocations(request_id, active)",
+                    "CREATE INDEX idx_allocation_events_request ON allocation_events(request_id)"
+            ),
+            List.of(
+                    """
+                    CREATE TABLE vehicles (
+                      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                      registration_number TEXT NOT NULL UNIQUE,
+                      vehicle_type        TEXT NOT NULL,
+                      capacity            INTEGER NOT NULL CHECK (capacity > 0),
+                      status              TEXT NOT NULL CHECK (status IN ('AVAILABLE','IN_TRANSIT','MAINTENANCE','INACTIVE')),
+                      created_at          TEXT NOT NULL
+                    )
+                    """,
+                    """
+                    CREATE TABLE dispatch_manifests (
+                      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                      request_id    INTEGER NOT NULL UNIQUE REFERENCES relief_requests(id),
+                      vehicle_id    INTEGER NOT NULL REFERENCES vehicles(id),
+                      driver_name   TEXT NOT NULL,
+                      status        TEXT NOT NULL CHECK (status IN ('DISPATCHED','DELIVERED')),
+                      assigned_at   TEXT NOT NULL,
+                      dispatched_at TEXT NOT NULL,
+                      delivered_at  TEXT
+                    )
+                    """,
+                    """
+                    CREATE TABLE dispatch_manifest_items (
+                      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                      manifest_id   INTEGER NOT NULL REFERENCES dispatch_manifests(id) ON DELETE CASCADE,
+                      allocation_id INTEGER NOT NULL UNIQUE REFERENCES allocations(id),
+                      quantity      INTEGER NOT NULL CHECK (quantity > 0)
+                    )
+                    """,
+                    "CREATE INDEX idx_vehicles_status ON vehicles(status)",
+                    "CREATE INDEX idx_dispatch_manifests_vehicle ON dispatch_manifests(vehicle_id)",
+                    "CREATE INDEX idx_dispatch_manifest_items_manifest ON dispatch_manifest_items(manifest_id)"
             ));
 
     static void apply(Connection c) {
@@ -122,16 +177,25 @@ final class Migrations {
             }
             int current = currentVersion(c);
             for (int v = current + 1; v <= VERSIONS.size(); v++) {
-                try (Statement st = c.createStatement()) {
-                    for (String sql : VERSIONS.get(v - 1)) {
-                        st.execute(sql);
+                c.setAutoCommit(false);
+                try {
+                    try (Statement st = c.createStatement()) {
+                        for (String sql : VERSIONS.get(v - 1)) {
+                            st.execute(sql);
+                        }
                     }
-                }
-                try (PreparedStatement ps = c.prepareStatement(
-                        "INSERT INTO schema_version(version, applied_at) VALUES (?, ?)")) {
-                    ps.setInt(1, v);
-                    ps.setString(2, LocalDateTime.now().withNano(0).toString());
-                    ps.executeUpdate();
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "INSERT INTO schema_version(version, applied_at) VALUES (?, ?)")) {
+                        ps.setInt(1, v);
+                        ps.setString(2, LocalDateTime.now().withNano(0).toString());
+                        ps.executeUpdate();
+                    }
+                    c.commit();
+                } catch (SQLException e) {
+                    c.rollback();
+                    throw e;
+                } finally {
+                    c.setAutoCommit(true);
                 }
             }
         } catch (SQLException e) {

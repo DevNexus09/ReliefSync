@@ -124,12 +124,16 @@ public class RequestRepository {
 
     public void addToItemAllocated(long requestId, long resourceId, int quantity) {
         String sql = "UPDATE request_items SET quantity_allocated = quantity_allocated + ?"
-                + " WHERE request_id = ? AND resource_id = ?";
+                + " WHERE request_id = ? AND resource_id = ?"
+                + " AND quantity_allocated + ? BETWEEN 0 AND quantity_requested";
         try (PreparedStatement ps = c().prepareStatement(sql)) {
             ps.setInt(1, quantity);
             ps.setLong(2, requestId);
             ps.setLong(3, resourceId);
-            ps.executeUpdate();
+            ps.setInt(4, quantity);
+            if (ps.executeUpdate() != 1) {
+                throw new IllegalStateException("Allocated quantity would be outside the requested range");
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not update allocated quantities", e);
         }

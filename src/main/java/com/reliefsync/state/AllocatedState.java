@@ -2,7 +2,7 @@ package com.reliefsync.state;
 
 import com.reliefsync.model.RequestStatus;
 
-/** Stock is reserved here, so plain cancel is not allowed any more. */
+/** Stock is reserved here; cancellation releases it before changing state. */
 public final class AllocatedState extends RequestState {
 
     @Override
@@ -13,5 +13,15 @@ public final class AllocatedState extends RequestState {
     @Override
     public RequestStatus dispatch() {
         return RequestStatus.DISPATCHED;
+    }
+
+    @Override
+    public RequestStatus reallocate() {
+        return RequestStatus.ALLOCATED;
+    }
+
+    @Override
+    public RequestStatus cancel() {
+        return RequestStatus.CANCELLED;
     }
 }

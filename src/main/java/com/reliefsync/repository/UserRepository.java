@@ -54,15 +54,21 @@ public class UserRepository {
         }
     }
 
-    public void insert(String username, String fullName, Role role, String passwordHash) {
+    public long insert(String username, String fullName, Role role, String passwordHash) {
         String sql = "INSERT INTO users(username, full_name, role, password_hash, created_at) VALUES (?,?,?,?,?)";
-        try (PreparedStatement ps = c().prepareStatement(sql)) {
+        try (PreparedStatement ps = c().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, username);
             ps.setString(2, fullName);
             ps.setString(3, role.name());
             ps.setString(4, passwordHash);
             ps.setString(5, LocalDateTime.now().withNano(0).toString());
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new IllegalStateException("Could not obtain the new user id");
+                }
+                return keys.getLong(1);
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not create user '" + username + "'", e);
         }

@@ -10,8 +10,10 @@ import com.reliefsync.repository.InventoryRepository;
 import com.reliefsync.repository.RequestRepository;
 import com.reliefsync.repository.ResourceRepository;
 import com.reliefsync.repository.UserRepository;
+import com.reliefsync.repository.VehicleRepository;
 import com.reliefsync.security.PasswordHasher;
 import com.reliefsync.service.AllocationService;
+import com.reliefsync.service.DispatchService;
 import com.reliefsync.service.RequestService;
 import java.util.List;
 
@@ -35,6 +37,7 @@ public final class Seeder {
     public static void seedDemo() {
         seedUsers();
         seedMasterData();
+        seedVehicles();
         seedRequests();
     }
 
@@ -96,6 +99,17 @@ public final class Seeder {
         }
     }
 
+    private static void seedVehicles() {
+        VehicleRepository vehicles = new VehicleRepository();
+        if (vehicles.findByRegistration("DHAKA-TRK-01").isEmpty()) {
+            vehicles.insert("DHAKA-TRK-01", "Cargo Truck", 5000);
+        }
+        if (vehicles.findByRegistration("SYLHET-VAN-02").isEmpty()) {
+            long maintenance = vehicles.insert("SYLHET-VAN-02", "Relief Van", 900);
+            vehicles.setStatus(maintenance, com.reliefsync.model.VehicleStatus.MAINTENANCE);
+        }
+    }
+
     /**
      * Drives the real workflow services to leave demo requests resting in
      * different lifecycle states, so a fresh database already demonstrates the
@@ -116,6 +130,9 @@ public final class Seeder {
 
         RequestService requestService = new RequestService();
         AllocationService allocationService = new AllocationService();
+        DispatchService dispatchService = new DispatchService();
+        long demoTruckId = new VehicleRepository().findByRegistration("DHAKA-TRK-01")
+                .orElseThrow().id();
 
         // 1. CRITICAL, three approval rounds, carried all the way to DELIVERED.
         long delivered = requestService.createDraft(volunteer, 1, Priority.CRITICAL,
@@ -127,8 +144,8 @@ public final class Seeder {
         requestService.decideVerification(reliefCoordinator, delivered, true, "Stock available at Dhaka");
         requestService.decideVerification(admin, delivered, true, "Approved for immediate release");
         allocationService.allocate(reliefCoordinator, delivered, "Fewest Centers");
-        allocationService.dispatch(transport, delivered);
-        allocationService.deliver(transport, delivered);
+        dispatchService.dispatch(transport, delivered, demoTruckId, "Kamal Hossain");
+        dispatchService.deliver(transport, delivered);
 
         // 2. NORMAL, single round approved, waiting for allocation.
         long verified = requestService.createDraft(volunteer, 3, Priority.NORMAL,

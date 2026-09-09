@@ -3,6 +3,9 @@ package com.reliefsync.ui;
 import com.reliefsync.facade.ReliefOperationFacade;
 import com.reliefsync.model.AffectedArea;
 import com.reliefsync.model.Allocation;
+import com.reliefsync.model.AllocationEvent;
+import com.reliefsync.model.DispatchManifest;
+import com.reliefsync.model.DispatchManifestItem;
 import com.reliefsync.model.DraftItem;
 import com.reliefsync.model.Priority;
 import com.reliefsync.model.RequestItem;
@@ -12,6 +15,7 @@ import com.reliefsync.model.Resource;
 import com.reliefsync.model.StatusChange;
 import com.reliefsync.model.Verification;
 import com.reliefsync.service.AccessControl;
+import com.reliefsync.service.CancellationResult;
 import com.reliefsync.service.Feature;
 import com.reliefsync.service.MasterDataService;
 import com.reliefsync.service.Session;
@@ -171,9 +175,22 @@ class RequestsPane extends ContentPane {
                 Ui.info("Request #" + id + " submitted for verification.");
             }));
             Button cancel = new Button("Cancel request");
+            cancel.setDisable(true);
+            table.getSelectionModel().selectedItemProperty().addListener((observable, oldRow, row) ->
+                    cancel.setDisable(row == null || !facade.canCancel(Session.user(), row.id())));
             cancel.setOnAction(e -> withSelected(id -> {
-                if (Ui.confirm("Cancel request #" + id + "?")) {
-                    facade.cancel(Session.user(), id);
+                RequestRow row = table.getSelectionModel().getSelectedItem();
+                String message = row.status() == RequestStatus.ALLOCATED
+                        ? "Cancel request #" + id + " and return all reserved stock to inventory?"
+                        : "Cancel request #" + id + "?";
+                if (Ui.confirm(message)) {
+                    CancellationResult result = facade.cancel(Session.user(), id);
+                    if (result.releasedAllocations() > 0) {
+                        Ui.info("Request #" + id + " cancelled. Released " + result.releasedQuantity()
+                                + " units across " + result.releasedAllocations() + " reservations.");
+                    } else {
+                        Ui.info("Request #" + id + " cancelled.");
+                    }
                 }
             }));
             actions.add(submit);
@@ -236,7 +253,8 @@ class RequestsPane extends ContentPane {
         for (RequestItem item : facade.items(requestId)) {
             sb.append("  - ").append(item.resourceName()).append(": ")
                     .append(item.quantityAllocated()).append(" allocated of ")
-                    .append(item.quantityRequested()).append(" requested\n");
+                    .append(item.quantityRequested()).append(" requested; ")
+                    .append(item.outstanding()).append(" outstanding\n");
         }
         List<Verification> verifications = facade.verifications(requestId);
         if (!verifications.isEmpty()) {
@@ -258,7 +276,42 @@ class RequestsPane extends ContentPane {
             for (Allocation a : allocations) {
                 sb.append("  - ").append(a.quantity()).append(" × ").append(a.resourceName())
                         .append(" from ").append(a.centerName())
-                        .append(" (").append(a.strategy()).append(")\n");
+                        .append(" (").append(a.strategy()).append(") — ")
+                        .append(a.active() ? "ACTIVE" : "RELEASED");
+                if (!a.active()) {
+                    sb.append(" by ").append(a.releasedByName()).append(" at ").append(a.releasedAt());
+                }
+                sb.append("\n");
+            }
+        }
+        List<AllocationEvent> allocationEvents = facade.allocationEvents(requestId);
+        if (!allocationEvents.isEmpty()) {
+            sb.append("\nAllocation audit events:\n");
+            for (AllocationEvent event : allocationEvents) {
+                sb.append("  - ").append(event.eventType()).append(": ")
+                        .append(event.quantity()).append(" × ").append(event.resourceName())
+                        .append(" at ").append(event.centerName())
+                        .append(" by ").append(event.actorName())
+                        .append(" at ").append(event.occurredAt()).append("\n");
+            }
+        }
+        DispatchManifest manifest = facade.manifest(requestId).orElse(null);
+        if (manifest != null) {
+            sb.append("\nDispatch manifest:\n")
+                    .append("  - Vehicle: ").append(manifest.vehicleRegistration())
+                    .append(" (").append(manifest.vehicleType()).append(", capacity ")
+                    .append(manifest.vehicleCapacity()).append(")\n")
+                    .append("  - Driver: ").append(manifest.driverName()).append("\n")
+                    .append("  - Status: ").append(manifest.status()).append("\n")
+                    .append("  - Load: ").append(manifest.totalLoad()).append(" generic capacity units\n")
+                    .append("  - Dispatched: ").append(manifest.dispatchedAt()).append("\n");
+            if (manifest.deliveredAt() != null) {
+                sb.append("  - Delivered: ").append(manifest.deliveredAt()).append("\n");
+            }
+            sb.append("  - Pickup lines:\n");
+            for (DispatchManifestItem item : facade.manifestItems(manifest.id())) {
+                sb.append("      ").append(item.centerName()).append(": ")
+                        .append(item.quantity()).append(" × ").append(item.resourceName()).append("\n");
             }
         }
         sb.append("\nStatus history:\n");

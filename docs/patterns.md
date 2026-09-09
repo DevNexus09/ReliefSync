@@ -8,7 +8,7 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 
 **Solution.** Each status has one state class overriding only its legal transitions; everything else fails with a clear message (`RequestState.deny`). Services ask the state object for the next status and never inspect the status themselves.
 
-**Alternatives considered.** Status checks in every service method (duplicated, error-prone); a transition table map (compact, but cannot attach per-state behavior like "Allocated blocks cancel because stock is reserved").
+**Alternatives considered.** Status checks in every service method (duplicated, error-prone); a transition table map (compact, but cannot attach per-state behavior such as allowing reallocation and cancellation-with-release only while Allocated).
 
 **Future benefit.** Adding a state (e.g. `PARTIALLY_DELIVERED`) means one new class plus registry entry; existing services stay untouched. The whole transition graph is unit-testable without a database (`RequestStateTest`).
 
@@ -26,7 +26,7 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 
 **Problem.** There is no single correct way to split limited stock across relief centers: draining the largest stockpile minimizes pickup points, while spreading withdrawals preserves local reserves. The coordinator should choose per situation and see the consequences before committing.
 
-**Solution.** `AllocationStrategy` is a pure planning function (items + stock → planned lines) with two implementations, registered by name. Because strategies never touch the database, the UI previews any strategy safely, and the service applies the chosen plan transactionally.
+**Solution.** `AllocationStrategy` is a pure planning function (items + stock → planned lines) with two implementations, registered by name. Because strategies never touch the database, the UI previews any strategy safely, and the service applies the chosen plan transactionally for both initial allocation and later outstanding-need reallocation.
 
 **Alternatives considered.** One hard-coded algorithm (no choice, no preview); flag parameters on one method (each new policy grows the same function).
 
@@ -34,9 +34,9 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 
 ## Facade — `com.reliefsync.facade.ReliefOperationFacade`
 
-**Problem.** The request workflow spans two services (requests + allocation) and three repositories. Without a boundary, every UI pane would wire and coordinate several services and know which one implements which step.
+**Problem.** The request workflow spans request, allocation, vehicle, and dispatch services plus several repositories. Without a boundary, every UI pane would wire and coordinate these components and know which one implements each step.
 
-**Solution.** One facade exposes the whole workflow (draft → verify → allocate → dispatch → deliver) plus the read models the screens need. Panes depend on this single API.
+**Solution.** One facade exposes the whole workflow (draft → verify → allocate/reallocate → vehicle-backed dispatch → deliver) plus the read models the screens need. Panes depend on this single API.
 
 **Alternatives considered.** Direct service access from the UI (workflow knowledge leaks into controllers); merging the services (one oversized class mixing verification and inventory concerns).
 
