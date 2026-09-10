@@ -3,6 +3,7 @@ package com.reliefsync.facade;
 import com.reliefsync.model.Allocation;
 import com.reliefsync.model.AllocationEvent;
 import com.reliefsync.model.DraftItem;
+import com.reliefsync.model.Notification;
 import com.reliefsync.model.DeliveryFailure;
 import com.reliefsync.model.DeliveryRecoveryAction;
 import com.reliefsync.model.DispatchManifest;
@@ -25,6 +26,7 @@ import com.reliefsync.service.AllocationResult;
 import com.reliefsync.service.AllocationService;
 import com.reliefsync.service.CancellationResult;
 import com.reliefsync.service.DispatchService;
+import com.reliefsync.service.NotificationService;
 import com.reliefsync.service.RequestService;
 import com.reliefsync.service.ReallocationRecoveryResult;
 import com.reliefsync.service.VehicleService;
@@ -44,6 +46,7 @@ public class ReliefOperationFacade {
     private final AllocationService allocationService = new AllocationService();
     private final DispatchService dispatchService = new DispatchService();
     private final VehicleService vehicleService = new VehicleService();
+    private final NotificationService notificationService = new NotificationService();
     private final RequestRepository requests = new RequestRepository();
     private final VerificationRepository verifications = new VerificationRepository();
     private final AllocationRepository allocations = new AllocationRepository();
@@ -182,5 +185,27 @@ public class ReliefOperationFacade {
 
     public List<AllocationEvent> allocationEvents(long requestId) {
         return allocations.eventsForRequest(requestId);
+    }
+
+    // ---- Current user's in-application notifications ----
+
+    public List<Notification> notifications(User actor) {
+        return notificationService.notifications(actor);
+    }
+
+    public int unreadNotificationCount(User actor) {
+        return notificationService.unreadCount(actor);
+    }
+
+    public void markNotificationRead(User actor, long notificationId) {
+        notificationService.markRead(actor, notificationId);
+    }
+
+    public int markAllNotificationsRead(User actor) {
+        return notificationService.markAllRead(actor);
+    }
+
+    public List<Notification> notificationsForRequest(User actor, long requestId) {
+        return notificationService.forRequest(actor, requestId);
     }
 }

@@ -1,6 +1,7 @@
 package com.reliefsync.ui;
 
 import com.reliefsync.model.User;
+import com.reliefsync.facade.ReliefOperationFacade;
 import com.reliefsync.service.AccessControl;
 import com.reliefsync.service.Feature;
 import com.reliefsync.service.Session;
@@ -8,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.application.Platform;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
@@ -21,6 +24,8 @@ class MainPane extends BorderPane {
 
     private final StackPane content = new StackPane();
     private final List<Button> navButtons = new ArrayList<>();
+    private final ReliefOperationFacade facade = new ReliefOperationFacade();
+    private Button notificationsButton;
 
     MainPane() {
         User user = Session.user();
@@ -71,6 +76,12 @@ class MainPane extends BorderPane {
         if (AccessControl.can(user.role(), Feature.REPORTS)) {
             addButton(nav, "Reports", new ReportsPane());
         }
+        NotificationsPane notifications = new NotificationsPane(this::refreshNotificationCount);
+        notificationsButton = addButton(nav, "Notifications", notifications);
+        refreshNotificationCount();
+        addEventFilter(MouseEvent.MOUSE_RELEASED, e -> Platform.runLater(() -> {
+            if (getScene() != null) refreshNotificationCount();
+        }));
         setLeft(nav);
 
         content.setPadding(new Insets(14));
@@ -97,5 +108,13 @@ class MainPane extends BorderPane {
         button.getStyleClass().add("active");
         content.getChildren().setAll(pane);
         Ui.guarded(pane::refresh);
+        refreshNotificationCount();
+    }
+
+    private void refreshNotificationCount() {
+        if (notificationsButton != null) {
+            int unread = facade.unreadNotificationCount(Session.user());
+            notificationsButton.setText(unread == 0 ? "Notifications" : "Notifications (" + unread + ")");
+        }
     }
 }

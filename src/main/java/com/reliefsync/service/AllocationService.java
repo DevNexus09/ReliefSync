@@ -28,6 +28,7 @@ public class AllocationService {
     private final InventoryRepository inventory = new InventoryRepository();
     private final AllocationRepository allocations = new AllocationRepository();
     private final RequestService requestService = new RequestService();
+    private final NotificationService notifications = new NotificationService();
 
     /** Pure planning — nothing is written, so the UI can preview strategies. */
     public AllocationResult preview(long requestId, String strategyName) {
@@ -66,23 +67,31 @@ public class AllocationService {
                 throw new IllegalStateException("No stock is available for any requested item");
             }
             String timestamp = RequestService.now();
+            long firstEventId = 0;
             for (PlannedAllocation line : lines) {
                 if (line.quantity() <= 0) {
                     throw new IllegalStateException("Allocation quantities must be greater than zero");
                 }
+                int previous = inventory.find(line.centerId(), line.resourceId()).orElseThrow().quantity();
                 inventory.decrement(line.centerId(), line.resourceId(), line.quantity());
                 long allocationId = allocations.insert(request.id(), line.centerId(), line.resourceId(),
                         line.quantity(), strategy.name());
                 requests.addToItemAllocated(request.id(), line.resourceId(), line.quantity());
-                allocations.addEvent(request.id(), allocationId, eventType,
+                long eventId = allocations.addEvent(request.id(), allocationId, eventType,
                         line.centerId(), line.resourceId(), line.quantity(), actor.id(), timestamp);
+                if (firstEventId == 0) firstEventId = eventId;
+                notifications.inventoryChanged(actor, line.centerId(), line.resourceId(), previous, timestamp);
             }
             if (recordStatusChange) {
                 requests.updateStatus(request.id(), next);
                 requests.addHistory(request.id(), request.status().name(), next.name(),
                         actor.fullName(), timestamp);
             }
-            return new AllocationResult(lines, shortages(items, lines));
+            List<Shortage> shortageList = shortages(items, lines);
+            int total = lines.stream().mapToInt(PlannedAllocation::quantity).sum();
+            notifications.requestAllocated(actor, request, eventType, firstEventId, strategy.name(), total,
+                    shortageList, timestamp);
+            return new AllocationResult(lines, shortageList);
         });
     }
 

@@ -8,6 +8,8 @@ JavaFX panes (com.reliefsync.ui)
 ReliefOperationFacade (workflows) + services (com.reliefsync.service)
         ↓
 State / Chain of Responsibility / Strategy (pattern packages)
+        ↓ domain events
+ReliefEventSubject → InAppNotificationObserver
         ↓
 Repositories (com.reliefsync.repository)
         ↓
@@ -20,6 +22,7 @@ Dependency rules:
 - Services contain business rules and transactions; they delegate lifecycle legality to State, verification depth to the Chain, and distribution policy to Strategy.
 - Repositories contain all SQL (parameterized, bounded) and row mapping; they hold no business rules.
 - Pattern packages are pure Java with no JavaFX or JDBC imports, so all business logic is unit-testable without a UI or database.
+- Workflow services publish immutable `ReliefEvent` values synchronously after successful domain writes and before commit. `InAppNotificationObserver` resolves recipients through one policy and writes through `NotificationRepository` on the same shared connection.
 
 ## ER diagram
 
@@ -46,6 +49,10 @@ erDiagram
     DISPATCH_MANIFESTS ||--|{ DISPATCH_MANIFEST_ITEMS : contains
     DISPATCH_MANIFESTS ||--o| DELIVERY_FAILURES : "may fail as"
     USERS ||--o{ DELIVERY_FAILURES : reports
+    USERS ||--o{ NOTIFICATIONS : receives
+    RELIEF_REQUESTS ||--o{ NOTIFICATIONS : "may relate to"
+    RELIEF_CENTERS ||--o{ LOW_STOCK_ALERT_STATE : tracks
+    RESOURCES ||--o{ LOW_STOCK_ALERT_STATE : tracks
 
     USERS { int id PK "username UNIQUE, role, password_hash (PBKDF2)" }
     AFFECTED_AREAS { int id PK "name UNIQUE, district, population, severity 1-5, active" }
@@ -62,9 +69,19 @@ erDiagram
     DISPATCH_MANIFEST_ITEMS { int id PK "manifest_id + allocation_id UNIQUE, quantity > 0" }
     DELIVERY_FAILURES { int id PK "request_id FK, manifest_id UNIQUE FK, reason, reporter FK, recovery action, timestamps" }
     STATUS_HISTORY { int id PK "request_id FK, from_status, to_status, changed_by, changed_at" }
+    NOTIFICATIONS { int id PK "recipient FK + event_key UNIQUE, event type, message, request FK, read_at" }
+    LOW_STOCK_ALERT_STATE { int center_id PK,FK "resource_id PK/FK, active, transition_no" }
 ```
 
 Constraints are enforced in the schema: foreign keys (with `PRAGMA foreign_keys=ON`), UNIQUE names, CHECK ranges on severity/quantities, and `UNIQUE(center_id, resource_id)` for inventory upserts. Migrations are versioned in `schema_version` and applied automatically at startup.
+
+## Notification event flow and lifecycle
+
+`NotificationBootstrap.initialize()` registers exactly one `InAppNotificationObserver` after database initialization; reset clears the subject so tests and reopened databases cannot retain stale observers. Domain services publish six strongly typed events inside their existing transaction: request awaiting verification, verification round completed, request allocated/reallocated, low-stock warning, delivery failure, and request delivered. Observer exceptions propagate, so a failed notification insert rolls back the domain mutation as well.
+
+`NotificationRecipientPolicy` maps each event to eligible roles and adds the request creator where applicable. The actor is excluded by default, except an administrator remains visible for administrative oversight. The UI obtains only the logged-in user's rows through `ReliefOperationFacade`; even an administrator cannot mark another user's notification as read through that API.
+
+Notification rows are idempotent through `UNIQUE(recipient_id,event_key)`. Low-stock warnings additionally track each center/resource condition: only an above-threshold to at-or-below-threshold mutation opens a warning cycle; staying low is silent, and restocking above the threshold re-arms the next crossing. Report queries never publish events.
 
 ## Authentication and signup
 

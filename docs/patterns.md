@@ -59,3 +59,15 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 **Solution.** One repository per aggregate hides all SQL and row mapping behind typed methods; services contain only business rules.
 
 **Future benefit.** Schema changes stay local to one repository; queries are parameterized and bounded (LIMIT) in one auditable layer.
+
+## Observer — `com.reliefsync.notification`
+
+**Problem.** Submission, verification, allocation, stock changes, delivery failure, and delivery completion happen in different services, but all may need persistent notices for role- or ownership-based recipients. Direct notification calls from every workflow would duplicate recipient rules and couple business operations to the JavaFX screen.
+
+**Solution.** `ReliefEventSubject` is the Subject, `ReliefEventObserver` is the Observer contract, and `InAppNotificationObserver` is the concrete observer. Services publish immutable, strongly typed `ReliefEvent` records. The observer asks `NotificationRecipientPolicy` for recipients and persists notifications through `NotificationRepository`; JavaFX only reads them through the facade.
+
+**Why Observer fits.** A workflow announces that a completed business event occurred without knowing how it will be presented. The current concrete observer creates in-app rows, while another local audit observer could be registered later without changing request, allocation, inventory, or dispatch services.
+
+**Correctness and duplicate control.** Publication is synchronous and ordered, duplicate observer registration is ignored, and callback failures propagate into the surrounding SQLite transaction. Deterministic event keys plus `UNIQUE(recipient_id,event_key)` make repeated delivery safe. Low-stock state records suppress repeated notices while stock remains low and re-arm only after stock rises above its threshold.
+
+**Testability.** The pure Java Subject is tested independently for registration, removal, ordering, duplicate registration, and failure propagation. SQLite integration tests verify role recipients, creator visibility, read ownership, persistence, low-stock transitions, migration, and forced-trigger rollback across submission, verification, allocation, failure, and delivery.

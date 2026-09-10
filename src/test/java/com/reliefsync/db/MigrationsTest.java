@@ -19,6 +19,45 @@ class MigrationsTest {
     }
 
     @Test
+    void versionFourDatabaseUpgradesToNotificationsWithoutLosingOperationalData() throws Exception {
+        String url = "jdbc:sqlite:" + tempDir.resolve("version-four.db");
+        Database.init(url);
+        Seeder.seedDemo();
+        int requestCount;
+        int manifestCount;
+        int failureCount;
+        try (var statement = Database.getInstance().connection().createStatement()) {
+            requestCount = scalar(statement, "SELECT COUNT(*) FROM relief_requests");
+            manifestCount = scalar(statement, "SELECT COUNT(*) FROM dispatch_manifests");
+            failureCount = scalar(statement, "SELECT COUNT(*) FROM delivery_failures");
+        }
+        Database.reset();
+        try (var connection = DriverManager.getConnection(url);
+             var statement = connection.createStatement()) {
+            statement.execute("DROP TABLE notifications");
+            statement.execute("DROP TABLE low_stock_alert_state");
+            statement.execute("DELETE FROM schema_version WHERE version=5");
+        }
+
+        Database.init(url);
+        try (var statement = Database.getInstance().connection().createStatement()) {
+            assertEquals(5, scalar(statement, "SELECT MAX(version) FROM schema_version"));
+            assertEquals(requestCount, scalar(statement, "SELECT COUNT(*) FROM relief_requests"));
+            assertEquals(manifestCount, scalar(statement, "SELECT COUNT(*) FROM dispatch_manifests"));
+            assertEquals(failureCount, scalar(statement, "SELECT COUNT(*) FROM delivery_failures"));
+            assertEquals(2, scalar(statement, "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+                    + " AND name IN ('notifications','low_stock_alert_state')"));
+            assertEquals(0, scalar(statement, "SELECT COUNT(*) FROM pragma_foreign_key_check"));
+        }
+    }
+
+    private static int scalar(java.sql.Statement statement, String sql) throws Exception {
+        try (var rs = statement.executeQuery(sql)) {
+            return rs.getInt(1);
+        }
+    }
+
+    @Test
     void versionOneDatabaseUpgradesWithoutLosingAllocations() throws Exception {
         String url = "jdbc:sqlite:" + tempDir.resolve("version-one.db");
         try (var connection = DriverManager.getConnection(url);
@@ -45,7 +84,7 @@ class MigrationsTest {
         Database.init(url);
         try (var statement = Database.getInstance().connection().createStatement()) {
             try (var rs = statement.executeQuery("SELECT MAX(version) FROM schema_version")) {
-                assertEquals(4, rs.getInt(1));
+                assertEquals(5, rs.getInt(1));
             }
             try (var rs = statement.executeQuery("SELECT quantity, active FROM allocations WHERE id=1")) {
                 assertEquals(25, rs.getInt("quantity"));
@@ -86,7 +125,7 @@ class MigrationsTest {
         Database.init(url);
         try (var statement = Database.getInstance().connection().createStatement()) {
             try (var rs = statement.executeQuery("SELECT MAX(version) FROM schema_version")) {
-                assertEquals(4, rs.getInt(1));
+                assertEquals(5, rs.getInt(1));
             }
             try (var rs = statement.executeQuery("SELECT quantity, active FROM allocations WHERE id=7")) {
                 assertEquals(40, rs.getInt("quantity"));
@@ -135,7 +174,7 @@ class MigrationsTest {
         Database.init(url);
         try (var statement = Database.getInstance().connection().createStatement()) {
             try (var rs = statement.executeQuery("SELECT MAX(version) FROM schema_version")) {
-                assertEquals(4, rs.getInt(1));
+                assertEquals(5, rs.getInt(1));
             }
             try (var rs = statement.executeQuery(
                     "SELECT attempt_number, status, delivered_at FROM dispatch_manifests WHERE id=9")) {

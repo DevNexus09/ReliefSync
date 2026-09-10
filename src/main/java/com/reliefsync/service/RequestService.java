@@ -5,6 +5,7 @@ import com.reliefsync.model.DraftItem;
 import com.reliefsync.model.Allocation;
 import com.reliefsync.model.AllocationEventType;
 import com.reliefsync.model.Priority;
+import com.reliefsync.model.Role;
 import com.reliefsync.model.ReliefRequest;
 import com.reliefsync.model.RequestStatus;
 import com.reliefsync.model.User;
@@ -32,6 +33,7 @@ public class RequestService {
     private final VerificationRepository verifications = new VerificationRepository();
     private final AllocationRepository allocations = new AllocationRepository();
     private final InventoryRepository inventory = new InventoryRepository();
+    private final NotificationService notifications = new NotificationService();
 
     /** True when the area already has an open request (probable duplicate). */
     public boolean hasOpenRequestForArea(long areaId) {
@@ -68,7 +70,16 @@ public class RequestService {
         AccessControl.require(actor, Feature.REQUESTS);
         ReliefRequest request = load(requestId);
         RequestStatus next = RequestStates.of(request.status()).submit();
-        transition(request, next, actor);
+        Database.getInstance().inTransaction(c -> {
+            String timestamp = now();
+            requests.updateStatus(request.id(), next);
+            long historyId = requests.addHistory(request.id(), request.status().name(), next.name(),
+                    actor.fullName(), timestamp);
+            Role nextRole = VerificationChains.requiredRoles(request.priority()).get(0);
+            notifications.requestAwaitingVerification(actor, request, historyId, nextRole, timestamp);
+            request.setStatus(next);
+            return null;
+        });
     }
 
     /** One human decision for the current verification round of the chain. */
@@ -83,12 +94,20 @@ public class RequestService {
         RequestState state = RequestStates.of(request.status());
         RequestStatus next = state.verdict(outcome.approved(), outcome.chainComplete());
         return Database.getInstance().inTransaction(c -> {
-            verifications.insert(requestId, outcome.roundRole(), actor.id(), outcome.approved(),
+            long verificationId = verifications.insert(requestId, outcome.roundRole(), actor.id(), outcome.approved(),
                     comment == null ? "" : comment.trim());
             if (next != request.status()) {
                 requests.updateStatus(requestId, next);
                 requests.addHistory(requestId, request.status().name(), next.name(), actor.fullName(), now());
             }
+            List<Role> required = VerificationChains.requiredRoles(request.priority());
+            int completedIndex = required.indexOf(outcome.roundRole());
+            Role nextRole = outcome.approved() && !outcome.chainComplete()
+                    ? required.get(completedIndex + 1)
+                    : outcome.approved() ? Role.RELIEF_COORDINATOR : null;
+            String timestamp = now();
+            notifications.verificationCompleted(actor, request, verificationId, outcome.roundRole(),
+                    outcome.approved(), outcome.chainComplete(), nextRole, timestamp);
             return outcome;
         });
     }
@@ -125,7 +144,10 @@ public class RequestService {
                 if (!allocations.markReleased(allocation.id(), actor.id(), timestamp)) {
                     throw new IllegalStateException("Allocation #" + allocation.id() + " was already released");
                 }
+                int previous = inventory.find(allocation.centerId(), allocation.resourceId()).orElseThrow().quantity();
                 inventory.adjust(allocation.centerId(), allocation.resourceId(), allocation.quantity());
+                notifications.inventoryChanged(actor, allocation.centerId(), allocation.resourceId(),
+                        previous, timestamp);
                 requests.addToItemAllocated(requestId, allocation.resourceId(), -allocation.quantity());
                 allocations.addEvent(requestId, allocation.id(), AllocationEventType.RELEASED,
                         allocation.centerId(), allocation.resourceId(), allocation.quantity(), actor.id(), timestamp);

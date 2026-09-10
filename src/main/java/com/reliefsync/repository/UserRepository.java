@@ -9,6 +9,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class UserRepository {
@@ -36,6 +39,37 @@ public class UserRepository {
                 }
                 return Optional.of(new User(rs.getLong("id"), rs.getString("username"),
                         rs.getString("full_name"), Role.valueOf(rs.getString("role"))));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not load user", e);
+        }
+    }
+
+    public List<User> findByRoles(Collection<Role> roles) {
+        if (roles == null || roles.isEmpty()) return List.of();
+        String placeholders = String.join(",", java.util.Collections.nCopies(roles.size(), "?"));
+        String sql = "SELECT id,username,full_name,role FROM users WHERE role IN (" + placeholders + ") ORDER BY id";
+        try (PreparedStatement ps = c().prepareStatement(sql)) {
+            int index = 1;
+            for (Role role : roles) ps.setString(index++, role.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                List<User> result = new ArrayList<>();
+                while (rs.next()) result.add(new User(rs.getLong("id"), rs.getString("username"),
+                        rs.getString("full_name"), Role.valueOf(rs.getString("role"))));
+                return result;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not load notification recipients", e);
+        }
+    }
+
+    public Optional<User> findById(long id) {
+        String sql = "SELECT id,username,full_name,role FROM users WHERE id=?";
+        try (PreparedStatement ps = c().prepareStatement(sql)) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(new User(rs.getLong("id"), rs.getString("username"),
+                        rs.getString("full_name"), Role.valueOf(rs.getString("role")))) : Optional.empty();
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not load user", e);

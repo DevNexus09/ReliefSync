@@ -23,20 +23,21 @@ Draft → Submitted → Verified → Allocated → Dispatched → Delivered
 
 ## What is implemented
 
-- SQLite persistence with versioned migrations and a meaningful 15-table schema, including reversible allocations, allocation audit events, vehicles, dispatch attempts, and delivery failures
+- SQLite persistence with versioned migrations and a meaningful 17-table schema (version 5), including reversible allocations, allocation audit events, vehicles, dispatch attempts, delivery failures, notifications, and low-stock alert state
 - PBKDF2 password hashing, persistent login and self-service signup, and centralized role-permission authorization for six roles; public signup safely creates Volunteer accounts only
 - CRUD with validation and non-destructive activate/deactivate for affected areas, relief centers, resources, and transport vehicles
 - Transactional inventory set/receive/issue with calculated low-stock status
 - **Workflow 1 — request verification:** multi-item drafts, probable-duplicate warnings, submission, and a Chain of Responsibility that requires 1/2/3 human approval rounds for Normal/High/Critical priority, with immutable verification history
 - **Workflow 2 — allocation to delivery and recovery:** strategy-based allocation planning with preview, transactional stock reservation, later reallocation of outstanding need, cancellation with atomic stock release, capacity-validated dispatch attempts, delivery confirmation, and a `DELIVERY_FAILED` path that supports vehicle-backed retry or explicit stock return for reallocation
+- **In-application notifications:** persistent role/ownership-targeted updates for requests awaiting verification, completed verification rounds, allocation/reallocation, true low-stock threshold crossings, delivery failures, and successful deliveries; users can view unread counts and mark one or all notifications read
 - Reports and search: low-stock report, requests-by-status summary, fulfillment-by-area analysis, and bounded parameterized request search
 - Optional, idempotent demo seeding that drives the real services to leave requests resting in five different lifecycle states; full status-history audit trail per request
 - A styled interface (`src/main/resources/app.css`): dark sidebar with active-item highlighting, dashboard cards, and color-coded status/priority badges throughout
-- 61 JUnit tests covering authentication/signup, the patterns, validation, backward-compatible migrations through schema v4, idempotent demo data, rollback-safe reservation release, reallocation, vehicle assignment, dispatch attempts, delivery failure/retry/recovery, and end-to-end workflows against a real SQLite database
+- 74 JUnit tests covering authentication/signup, all patterns, validation, backward-compatible migrations through schema v5, notification recipients/idempotency/read state/rollback, low-stock re-arming, reservation release, reallocation, vehicles, dispatch attempts, delivery recovery, and end-to-end workflows against a real SQLite database
 
-## Screens (7)
+## Screens (8)
 
-Login and Signup · Dashboard · Master Data (areas / centers / resources / vehicles) · Inventory · Relief Requests (draft + verification) · Allocation & Dispatch · Reports & Search
+Login and Signup · Dashboard · Master Data (areas / centers / resources / vehicles) · Inventory · Relief Requests (draft + verification) · Allocation & Dispatch · Reports & Search · Notifications
 
 ## Design patterns
 
@@ -48,6 +49,7 @@ Login and Signup · Dashboard · Master Data (areas / centers / resources / vehi
 | Facade | `com.reliefsync.facade.ReliefOperationFacade` | One workflow API for the UI across services |
 | Singleton | `com.reliefsync.db.Database` | Single owned SQLite connection and transaction scope |
 | Repository | `com.reliefsync.repository` | SQL isolated from business logic and UI |
+| Observer | `com.reliefsync.notification` | Synchronous domain events become persistent, recipient-specific notifications without coupling workflows to the UI |
 
 Full justifications (problem, alternatives, future benefits) are in [docs/patterns.md](docs/patterns.md); layering rules and the ER diagram are in [docs/architecture.md](docs/architecture.md).
 

@@ -1,0 +1,10 @@
+package com.reliefsync.model;
+
+public enum NotificationEventType {
+    REQUEST_AWAITING_VERIFICATION,
+    VERIFICATION_ROUND_COMPLETED,
+    REQUEST_ALLOCATED,
+    LOW_STOCK_WARNING,
+    DELIVERY_FAILURE,
+    REQUEST_DELIVERED
+}

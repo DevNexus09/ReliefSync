@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,10 +42,10 @@ public class VerificationRepository {
         }
     }
 
-    public void insert(long requestId, Role roundRole, long verifierId, boolean approved, String comment) {
+    public long insert(long requestId, Role roundRole, long verifierId, boolean approved, String comment) {
         String sql = "INSERT INTO verifications(request_id, round_role, verifier_id, approved, comment, decided_at)"
                 + " VALUES (?,?,?,?,?,?)";
-        try (PreparedStatement ps = c().prepareStatement(sql)) {
+        try (PreparedStatement ps = c().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, requestId);
             ps.setString(2, roundRole.name());
             ps.setLong(3, verifierId);
@@ -52,6 +53,10 @@ public class VerificationRepository {
             ps.setString(5, comment);
             ps.setString(6, LocalDateTime.now().withNano(0).toString());
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) throw new IllegalStateException("Could not obtain verification id");
+                return keys.getLong(1);
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not record the verification decision", e);
         }

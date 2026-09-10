@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class InventoryRepository {
 
@@ -49,6 +50,12 @@ public class InventoryRepository {
 
     public List<StockView> stockForCenter(long centerId) {
         return query(BASE_SELECT + " WHERE i.center_id = ? ORDER BY r.name", centerId);
+    }
+
+    public Optional<StockView> find(long centerId, long resourceId) {
+        List<StockView> rows = query(BASE_SELECT + " WHERE i.center_id=? AND i.resource_id=?",
+                centerId, resourceId);
+        return rows.stream().findFirst();
     }
 
     /** Stock usable for allocation planning: positive quantity, active center and resource. */

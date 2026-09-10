@@ -31,6 +31,7 @@ public class DispatchService {
     private final VehicleRepository vehicles = new VehicleRepository();
     private final DispatchManifestRepository manifests = new DispatchManifestRepository();
     private final DeliveryFailureRepository failures = new DeliveryFailureRepository();
+    private final NotificationService notifications = new NotificationService();
 
     public void dispatch(User actor, long requestId, long vehicleId, String driverName) {
         AccessControl.require(actor, Feature.TRANSPORT);
@@ -119,6 +120,7 @@ public class DispatchService {
             }
             requests.updateStatus(requestId, next);
             requests.addHistory(requestId, request.status().name(), next.name(), actor.fullName(), timestamp);
+            notifications.requestDelivered(actor, request, manifest, timestamp);
             return null;
         });
     }
@@ -151,6 +153,7 @@ public class DispatchService {
                     recoveryAction, notes);
             requests.updateStatus(requestId, next);
             requests.addHistory(requestId, request.status().name(), next.name(), actor.fullName(), timestamp);
+            notifications.deliveryFailed(actor, request, manifest, normalizedReason, recoveryAction, timestamp);
             return null;
         });
     }
@@ -184,7 +187,10 @@ public class DispatchService {
                 if (!allocations.markReleased(allocation.id(), actor.id(), timestamp)) {
                     throw new IllegalStateException("Allocation #" + allocation.id() + " was already released");
                 }
+                int previous = inventory.find(allocation.centerId(), allocation.resourceId()).orElseThrow().quantity();
                 inventory.adjust(allocation.centerId(), allocation.resourceId(), allocation.quantity());
+                notifications.inventoryChanged(actor, allocation.centerId(), allocation.resourceId(),
+                        previous, timestamp);
                 requests.addToItemAllocated(requestId, allocation.resourceId(), -allocation.quantity());
                 allocations.addEvent(requestId, allocation.id(), AllocationEventType.RELEASED,
                         allocation.centerId(), allocation.resourceId(), allocation.quantity(), actor.id(), timestamp);

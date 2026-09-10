@@ -88,11 +88,11 @@ public class AllocationRepository {
         }
     }
 
-    public void addEvent(long requestId, long allocationId, AllocationEventType type,
+    public long addEvent(long requestId, long allocationId, AllocationEventType type,
                          long centerId, long resourceId, int quantity, long actorId, String occurredAt) {
         String sql = "INSERT INTO allocation_events(request_id, allocation_id, event_type, center_id,"
                 + " resource_id, quantity, actor_id, occurred_at) VALUES (?,?,?,?,?,?,?,?)";
-        try (PreparedStatement ps = c().prepareStatement(sql)) {
+        try (PreparedStatement ps = c().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, requestId);
             ps.setLong(2, allocationId);
             ps.setString(3, type.name());
@@ -102,6 +102,10 @@ public class AllocationRepository {
             ps.setLong(7, actorId);
             ps.setString(8, occurredAt);
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) throw new IllegalStateException("Could not obtain allocation event id");
+                return keys.getLong(1);
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not record the allocation event", e);
         }

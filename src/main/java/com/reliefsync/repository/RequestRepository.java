@@ -196,18 +196,35 @@ public class RequestRepository {
         }
     }
 
-    public void addHistory(long requestId, String from, String to, String changedBy, String changedAt) {
+    public long addHistory(long requestId, String from, String to, String changedBy, String changedAt) {
         String sql = "INSERT INTO status_history(request_id, from_status, to_status, changed_by, changed_at)"
                 + " VALUES (?,?,?,?,?)";
-        try (PreparedStatement ps = c().prepareStatement(sql)) {
+        try (PreparedStatement ps = c().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, requestId);
             ps.setString(2, from);
             ps.setString(3, to);
             ps.setString(4, changedBy);
             ps.setString(5, changedAt);
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (!keys.next()) throw new IllegalStateException("Could not obtain status history id");
+                return keys.getLong(1);
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Could not record status history", e);
+        }
+    }
+
+    public String areaName(long requestId) {
+        String sql = "SELECT a.name FROM relief_requests q JOIN affected_areas a ON a.id=q.area_id WHERE q.id=?";
+        try (PreparedStatement ps = c().prepareStatement(sql)) {
+            ps.setLong(1, requestId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new IllegalArgumentException("Request #" + requestId + " does not exist");
+                return rs.getString(1);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not load request area", e);
         }
     }
 

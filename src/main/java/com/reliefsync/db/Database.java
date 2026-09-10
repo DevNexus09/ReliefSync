@@ -1,5 +1,7 @@
 package com.reliefsync.db;
 
+import com.reliefsync.notification.NotificationBootstrap;
+
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -54,6 +56,7 @@ public final class Database {
 
     /** Closes and clears the singleton (used on shutdown and between tests). */
     public static synchronized void reset() {
+        NotificationBootstrap.reset();
         if (instance != null) {
             try {
                 instance.connection.close();

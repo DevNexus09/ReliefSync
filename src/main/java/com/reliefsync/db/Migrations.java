@@ -229,6 +229,39 @@ final class Migrations {
                     "CREATE INDEX idx_delivery_failures_manifest ON delivery_failures(manifest_id)",
                     "CREATE INDEX idx_delivery_failures_reporter ON delivery_failures(reported_by)",
                     "CREATE INDEX idx_delivery_failures_action ON delivery_failures(recovery_action)"
+            ),
+            List.of(
+                    """
+                    CREATE TABLE notifications (
+                      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                      recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                      event_type   TEXT NOT NULL CHECK (event_type IN (
+                        'REQUEST_AWAITING_VERIFICATION','VERIFICATION_ROUND_COMPLETED',
+                        'REQUEST_ALLOCATED','LOW_STOCK_WARNING','DELIVERY_FAILURE','REQUEST_DELIVERED'
+                      )),
+                      event_key    TEXT NOT NULL,
+                      title        TEXT NOT NULL,
+                      message      TEXT NOT NULL,
+                      request_id   INTEGER REFERENCES relief_requests(id) ON DELETE CASCADE,
+                      created_at   TEXT NOT NULL,
+                      read_at      TEXT,
+                      UNIQUE (recipient_id, event_key)
+                    )
+                    """,
+                    """
+                    CREATE TABLE low_stock_alert_state (
+                      center_id       INTEGER NOT NULL REFERENCES relief_centers(id) ON DELETE CASCADE,
+                      resource_id     INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+                      active          INTEGER NOT NULL CHECK (active IN (0,1)),
+                      transition_no   INTEGER NOT NULL DEFAULT 0 CHECK (transition_no >= 0),
+                      last_changed_at TEXT NOT NULL,
+                      PRIMARY KEY (center_id, resource_id)
+                    )
+                    """,
+                    "CREATE INDEX idx_notifications_recipient_read ON notifications(recipient_id, read_at)",
+                    "CREATE INDEX idx_notifications_recipient_created ON notifications(recipient_id, created_at)",
+                    "CREATE INDEX idx_notifications_request ON notifications(request_id)",
+                    "CREATE INDEX idx_notifications_event_type ON notifications(event_type)"
             ));
 
     static void apply(Connection c) {
