@@ -167,6 +167,68 @@ final class Migrations {
                     "CREATE INDEX idx_vehicles_status ON vehicles(status)",
                     "CREATE INDEX idx_dispatch_manifests_vehicle ON dispatch_manifests(vehicle_id)",
                     "CREATE INDEX idx_dispatch_manifest_items_manifest ON dispatch_manifest_items(manifest_id)"
+            ),
+            List.of(
+                    """
+                    CREATE TABLE dispatch_manifests_v4 (
+                      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                      request_id     INTEGER NOT NULL REFERENCES relief_requests(id),
+                      attempt_number INTEGER NOT NULL CHECK (attempt_number > 0),
+                      vehicle_id     INTEGER NOT NULL REFERENCES vehicles(id),
+                      driver_name    TEXT NOT NULL,
+                      status         TEXT NOT NULL CHECK (status IN ('DISPATCHED','DELIVERY_FAILED','DELIVERED')),
+                      assigned_at    TEXT NOT NULL,
+                      dispatched_at  TEXT NOT NULL,
+                      delivered_at   TEXT,
+                      failed_at      TEXT,
+                      UNIQUE (request_id, attempt_number)
+                    )
+                    """,
+                    """
+                    INSERT INTO dispatch_manifests_v4(
+                      id, request_id, attempt_number, vehicle_id, driver_name, status,
+                      assigned_at, dispatched_at, delivered_at, failed_at)
+                    SELECT id, request_id, 1, vehicle_id, driver_name, status,
+                           assigned_at, dispatched_at, delivered_at, NULL
+                    FROM dispatch_manifests
+                    """,
+                    """
+                    CREATE TABLE dispatch_manifest_items_v4 (
+                      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                      manifest_id   INTEGER NOT NULL REFERENCES dispatch_manifests_v4(id) ON DELETE CASCADE,
+                      allocation_id INTEGER NOT NULL REFERENCES allocations(id),
+                      quantity      INTEGER NOT NULL CHECK (quantity > 0),
+                      UNIQUE (manifest_id, allocation_id)
+                    )
+                    """,
+                    """
+                    INSERT INTO dispatch_manifest_items_v4(id, manifest_id, allocation_id, quantity)
+                    SELECT id, manifest_id, allocation_id, quantity FROM dispatch_manifest_items
+                    """,
+                    "DROP TABLE dispatch_manifest_items",
+                    "DROP TABLE dispatch_manifests",
+                    "ALTER TABLE dispatch_manifests_v4 RENAME TO dispatch_manifests",
+                    "ALTER TABLE dispatch_manifest_items_v4 RENAME TO dispatch_manifest_items",
+                    """
+                    CREATE TABLE delivery_failures (
+                      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                      request_id      INTEGER NOT NULL REFERENCES relief_requests(id) ON DELETE CASCADE,
+                      manifest_id     INTEGER NOT NULL UNIQUE REFERENCES dispatch_manifests(id),
+                      reason          TEXT NOT NULL CHECK (length(trim(reason)) BETWEEN 1 AND 500),
+                      reported_by     INTEGER NOT NULL REFERENCES users(id),
+                      reported_at     TEXT NOT NULL,
+                      recovery_action TEXT NOT NULL CHECK (recovery_action IN ('RETRY','REALLOCATE')),
+                      resolved_at     TEXT,
+                      recovery_notes  TEXT
+                    )
+                    """,
+                    "CREATE INDEX idx_dispatch_manifests_vehicle ON dispatch_manifests(vehicle_id)",
+                    "CREATE INDEX idx_dispatch_manifests_request ON dispatch_manifests(request_id, attempt_number)",
+                    "CREATE INDEX idx_dispatch_manifest_items_manifest ON dispatch_manifest_items(manifest_id)",
+                    "CREATE INDEX idx_delivery_failures_request ON delivery_failures(request_id)",
+                    "CREATE INDEX idx_delivery_failures_manifest ON delivery_failures(manifest_id)",
+                    "CREATE INDEX idx_delivery_failures_reporter ON delivery_failures(reported_by)",
+                    "CREATE INDEX idx_delivery_failures_action ON delivery_failures(recovery_action)"
             ));
 
     static void apply(Connection c) {

@@ -44,6 +44,21 @@ public abstract class RequestState {
         throw deny("mark delivered");
     }
 
+    /** DISPATCHED -> DELIVERY_FAILED */
+    public RequestStatus deliveryFailed() {
+        throw deny("report delivery failure for");
+    }
+
+    /** DELIVERY_FAILED -> DISPATCHED */
+    public RequestStatus retryDelivery() {
+        throw deny("retry delivery for");
+    }
+
+    /** DELIVERY_FAILED -> ALLOCATED */
+    public RequestStatus returnForReallocation() {
+        throw deny("return for reallocation");
+    }
+
     /** DRAFT/SUBMITTED/VERIFIED -> CANCELLED (before stock is reserved) */
     public RequestStatus cancel() {
         throw deny("cancel");

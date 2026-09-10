@@ -2,6 +2,8 @@ package com.reliefsync.ui;
 
 import com.reliefsync.facade.ReliefOperationFacade;
 import com.reliefsync.model.Allocation;
+import com.reliefsync.model.DeliveryFailure;
+import com.reliefsync.model.DeliveryRecoveryAction;
 import com.reliefsync.model.DispatchManifest;
 import com.reliefsync.model.DispatchManifestItem;
 import com.reliefsync.model.PlannedAllocation;
@@ -14,17 +16,24 @@ import com.reliefsync.service.AccessControl;
 import com.reliefsync.service.AllocationResult;
 import com.reliefsync.service.CancellationResult;
 import com.reliefsync.service.Feature;
+import com.reliefsync.service.ReallocationRecoveryResult;
 import com.reliefsync.service.Session;
 import com.reliefsync.strategy.AllocationStrategies;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -55,7 +64,7 @@ class AllocationPane extends ContentPane {
                 Ui.badgeCol("Status", RequestRow::status, 110),
                 Ui.col("Created", RequestRow::createdAt, 150)));
         requestTable.setPrefHeight(155);
-        requestTable.setPlaceholder(new Label("No verified, allocated, or dispatched requests"));
+        requestTable.setPlaceholder(new Label("No requests awaiting allocation, dispatch, or recovery"));
         Ui.fitColumns(requestTable);
 
         planTable.getColumns().addAll(List.of(
@@ -121,6 +130,20 @@ class AllocationPane extends ContentPane {
             Ui.info("Request #" + id + " dispatched using " + vehicle.registrationNumber() + ".");
         }));
 
+        Button retry = Ui.primary(new Button("Retry delivery"));
+        retry.setOnAction(e -> withSelected(id -> {
+            Vehicle vehicle = vehicleBox.getValue();
+            if (vehicle == null) {
+                throw new IllegalArgumentException("Select an available vehicle first");
+            }
+            facade.retryDelivery(Session.user(), id, vehicle.id(), driverField.getText());
+            driverField.clear();
+            reloadVehicles(canTransport);
+            reloadRequests();
+            Ui.info("Delivery retry dispatched for request #" + id + " using "
+                    + vehicle.registrationNumber() + ".");
+        }));
+
         Button deliver = new Button("Confirm delivery");
         deliver.setOnAction(e -> withSelected(id -> {
             facade.deliver(Session.user(), id);
@@ -129,15 +152,48 @@ class AllocationPane extends ContentPane {
             Ui.info("Request #" + id + " delivered. Workflow complete.");
         }));
 
+        Button reportFailure = Ui.danger(new Button("Report delivery failure"));
+        reportFailure.setOnAction(e -> withSelected(id -> {
+            FailureReport report = failureDialog();
+            if (report == null) {
+                return;
+            }
+            facade.reportDeliveryFailure(Session.user(), id, report.reason(),
+                    report.action(), report.notes());
+            reloadVehicles(canTransport);
+            reloadRequests();
+            Ui.info("Delivery failure recorded for request #" + id + ". Recovery: "
+                    + report.action().label() + ".");
+        }));
+
+        Button returnForReallocation = new Button("Return for reallocation");
+        returnForReallocation.setOnAction(e -> withSelected(id -> {
+            if (!Ui.confirm("Return request #" + id + " for reallocation? Active reservations will be "
+                    + "released and recoverable stock returned to inventory.")) {
+                return;
+            }
+            ReallocationRecoveryResult result = facade.returnForReallocation(Session.user(), id, null);
+            reloadRequests();
+            Ui.info("Request #" + id + " returned for reallocation. Released "
+                    + result.releasedQuantity() + " units across " + result.releasedAllocations()
+                    + " reservations.");
+        }));
+
         Runnable updateDispatch = () -> {
             RequestRow row = requestTable.getSelectionModel().getSelectedItem();
             Vehicle vehicle = vehicleBox.getValue();
             long load = activeLoad();
-            boolean valid = canTransport && row != null && row.status() == RequestStatus.ALLOCATED
+            boolean transportReady = canTransport && row != null
                     && vehicle != null && !driverField.getText().trim().isEmpty()
                     && load > 0 && load <= vehicle.capacity();
-            dispatch.setDisable(!valid);
-            if (row != null && row.status() == RequestStatus.ALLOCATED && vehicle != null
+            DeliveryFailure failure = row == null ? null
+                    : facade.latestDeliveryFailure(row.id()).orElse(null);
+            dispatch.setDisable(!(transportReady && row.status() == RequestStatus.ALLOCATED));
+            retry.setDisable(!(transportReady && row.status() == RequestStatus.DELIVERY_FAILED
+                    && failure != null && !failure.resolved()
+                    && failure.recoveryAction() == DeliveryRecoveryAction.RETRY));
+            if (row != null && (row.status() == RequestStatus.ALLOCATED
+                    || row.status() == RequestStatus.DELIVERY_FAILED) && vehicle != null
                     && load > vehicle.capacity()) {
                 transportInfo.setText("Capacity warning: request load " + load
                         + " exceeds selected vehicle capacity " + vehicle.capacity() + ".");
@@ -166,6 +222,11 @@ class AllocationPane extends ContentPane {
             allocate.setDisable(!canAllocate || row == null || row.status() != RequestStatus.VERIFIED);
             reallocate.setDisable(!canAllocate || row == null || row.status() != RequestStatus.ALLOCATED);
             deliver.setDisable(!canTransport || row == null || row.status() != RequestStatus.DISPATCHED);
+            reportFailure.setDisable(!canTransport || row == null || row.status() != RequestStatus.DISPATCHED);
+            DeliveryFailure failure = row == null ? null : facade.latestDeliveryFailure(row.id()).orElse(null);
+            returnForReallocation.setDisable(!canAllocate || row == null
+                    || row.status() != RequestStatus.DELIVERY_FAILED || failure == null || failure.resolved()
+                    || failure.recoveryAction() != DeliveryRecoveryAction.REALLOCATE);
             cancel.setDisable(row == null || !facade.canCancel(Session.user(), row.id()));
             if (row == null) {
                 itemInfo.setText("");
@@ -180,21 +241,26 @@ class AllocationPane extends ContentPane {
         allocate.setDisable(true);
         reallocate.setDisable(true);
         dispatch.setDisable(true);
+        retry.setDisable(true);
         deliver.setDisable(true);
+        reportFailure.setDisable(true);
+        returnForReallocation.setDisable(true);
         cancel.setDisable(true);
 
         HBox strategyRow = new HBox(10, new Label("Strategy:"), strategyBox, strategyInfo);
         strategyRow.setAlignment(Pos.CENTER_LEFT);
         HBox transportRow = new HBox(10, new Label("Vehicle:"), vehicleBox,
-                new Label("Driver:"), driverField, dispatch, deliver);
+                new Label("Driver:"), driverField, dispatch, retry, deliver);
         transportRow.setAlignment(Pos.CENTER_LEFT);
+        HBox recoveryRow = new HBox(10, reportFailure, returnForReallocation);
+        recoveryRow.setAlignment(Pos.CENTER_LEFT);
         HBox actionRow = new HBox(10, preview, allocate, reallocate, cancel);
         actionRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox box = new VBox(10, Ui.heading("Allocation & Dispatch"),
                 requestTable, itemInfo, new Label("Existing reservations:"), reservationTable,
                 strategyRow, actionRow, new Label("Transport assignment:"), transportRow,
-                transportInfo, planTable, planInfo);
+                recoveryRow, transportInfo, planTable, planInfo);
         ScrollPane scroll = new ScrollPane(box);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -229,7 +295,8 @@ class AllocationPane extends ContentPane {
             transportInfo.setStyle("-fx-text-fill: #666666;");
             return;
         }
-        StringBuilder text = new StringBuilder("Manifest: ")
+        StringBuilder text = new StringBuilder("Latest attempt #")
+                .append(manifest.attemptNumber()).append(" [").append(manifest.status()).append("]: ")
                 .append(manifest.vehicleRegistration()).append(" — ")
                 .append(manifest.vehicleType()).append(", driver ").append(manifest.driverName())
                 .append(", load ").append(manifest.totalLoad()).append("/")
@@ -238,10 +305,19 @@ class AllocationPane extends ContentPane {
         if (manifest.deliveredAt() != null) {
             text.append(", delivered ").append(manifest.deliveredAt());
         }
+        if (manifest.failedAt() != null) {
+            text.append(", failed ").append(manifest.failedAt());
+        }
         text.append(". Pickups: ");
         for (DispatchManifestItem item : facade.manifestItems(manifest.id())) {
             text.append(item.centerName()).append(" — ").append(item.quantity()).append(" × ")
                     .append(item.resourceName()).append("; ");
+        }
+        DeliveryFailure failure = facade.latestDeliveryFailure(requestId).orElse(null);
+        if (failure != null) {
+            text.append(" Failure: ").append(failure.reason())
+                    .append("; recovery ").append(failure.recoveryAction().label())
+                    .append(failure.resolved() ? " (resolved)." : " (pending).");
         }
         transportInfo.setText(text.toString());
         transportInfo.setStyle("-fx-text-fill: #1f2937;");
@@ -279,7 +355,47 @@ class AllocationPane extends ContentPane {
 
     private void reloadRequests() {
         requestTable.setItems(FXCollections.observableArrayList(facade.requestsByStatuses(
-                List.of(RequestStatus.VERIFIED, RequestStatus.ALLOCATED, RequestStatus.DISPATCHED))));
+                List.of(RequestStatus.VERIFIED, RequestStatus.ALLOCATED,
+                        RequestStatus.DISPATCHED, RequestStatus.DELIVERY_FAILED))));
+    }
+
+    private static FailureReport failureDialog() {
+        Dialog<FailureReport> dialog = new Dialog<>();
+        dialog.setTitle("Report delivery failure");
+        dialog.setHeaderText("Record what prevented this dispatch from being delivered");
+        ButtonType record = new ButtonType("Record failure", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(record, ButtonType.CANCEL);
+
+        TextArea reason = new TextArea();
+        reason.setPromptText("Failure reason (required)");
+        reason.setPrefRowCount(3);
+        reason.setWrapText(true);
+        ComboBox<DeliveryRecoveryAction> action = new ComboBox<>(
+                FXCollections.observableArrayList(DeliveryRecoveryAction.values()));
+        action.setValue(DeliveryRecoveryAction.RETRY);
+        TextArea notes = new TextArea();
+        notes.setPromptText("Optional recovery notes");
+        notes.setPrefRowCount(2);
+        notes.setWrapText(true);
+
+        GridPane form = new GridPane();
+        form.setHgap(10);
+        form.setVgap(10);
+        form.addRow(0, new Label("Reason:"), reason);
+        form.addRow(1, new Label("Recovery:"), action);
+        form.addRow(2, new Label("Notes:"), notes);
+        GridPane.setHgrow(reason, javafx.scene.layout.Priority.ALWAYS);
+        GridPane.setHgrow(notes, javafx.scene.layout.Priority.ALWAYS);
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setPrefWidth(540);
+        Node recordButton = dialog.getDialogPane().lookupButton(record);
+        recordButton.disableProperty().bind(reason.textProperty().isEmpty());
+        dialog.setResultConverter(button -> button == record
+                ? new FailureReport(reason.getText(), action.getValue(), notes.getText()) : null);
+        return dialog.showAndWait().orElse(null);
+    }
+
+    private record FailureReport(String reason, DeliveryRecoveryAction action, String notes) {
     }
 
     private void reloadVehicles(boolean canTransport) {

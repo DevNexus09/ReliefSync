@@ -4,7 +4,7 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 
 ## State — `com.reliefsync.state`
 
-**Problem.** A relief request passes through eight lifecycle states (Draft, Submitted, Verified, Rejected, Allocated, Dispatched, Delivered, Cancelled) and every action (submit, verify, allocate, dispatch, deliver, cancel) is legal only in some of them. Encoding this in services would scatter `if (status == …)` checks across the codebase and make illegal transitions easy to miss.
+**Problem.** A relief request passes through nine lifecycle states (Draft, Submitted, Verified, Rejected, Allocated, Dispatched, Delivery Failed, Delivered, Cancelled), and actions such as submit, verify, allocate, dispatch, fail, retry, recover, deliver, and cancel are legal only in specific states. Encoding this in services would scatter status checks across the codebase and make illegal transitions easy to miss.
 
 **Solution.** Each status has one state class overriding only its legal transitions; everything else fails with a clear message (`RequestState.deny`). Services ask the state object for the next status and never inspect the status themselves.
 
@@ -36,11 +36,11 @@ Each pattern below was introduced for a concrete design problem in ReliefSync, n
 
 **Problem.** The request workflow spans request, allocation, vehicle, and dispatch services plus several repositories. Without a boundary, every UI pane would wire and coordinate these components and know which one implements each step.
 
-**Solution.** One facade exposes the whole workflow (draft → verify → allocate/reallocate → vehicle-backed dispatch → deliver) plus the read models the screens need. Panes depend on this single API.
+**Solution.** One facade exposes the whole workflow (draft → verify → allocate/reallocate → vehicle-backed dispatch → delivery/failure/recovery) plus the read models the screens need. Panes depend on this single API.
 
 **Alternatives considered.** Direct service access from the UI (workflow knowledge leaks into controllers); merging the services (one oversized class mixing verification and inventory concerns).
 
-**Future benefit.** Deferred features (notifications on status change, reallocation after failed delivery) plug in behind the facade without touching any screen.
+**Future benefit.** Further recovery policies or notifications can plug in behind the facade without exposing repositories to the screens.
 
 ## Singleton — `com.reliefsync.db.Database`
 

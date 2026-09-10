@@ -13,4 +13,9 @@ public final class DispatchedState extends RequestState {
     public RequestStatus deliver() {
         return RequestStatus.DELIVERED;
     }
+
+    @Override
+    public RequestStatus deliveryFailed() {
+        return RequestStatus.DELIVERY_FAILED;
+    }
 }

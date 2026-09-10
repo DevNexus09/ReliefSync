@@ -103,7 +103,7 @@ class DashboardPane extends ContentPane {
         areasValue.setText(String.valueOf(masterData.activeAreas().size()));
         openValue.setText(String.valueOf(reports.countWithStatus(
                 RequestStatus.SUBMITTED, RequestStatus.VERIFIED,
-                RequestStatus.ALLOCATED, RequestStatus.DISPATCHED)));
+                RequestStatus.ALLOCATED, RequestStatus.DISPATCHED, RequestStatus.DELIVERY_FAILED)));
         lowStockValue.setText(String.valueOf(reports.lowStock().size()));
         deliveredValue.setText(String.valueOf(reports.countWithStatus(RequestStatus.DELIVERED)));
 

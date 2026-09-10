@@ -16,6 +16,7 @@ public final class RequestStates {
         register(new RejectedState());
         register(new AllocatedState());
         register(new DispatchedState());
+        register(new DeliveryFailedState());
         register(new DeliveredState());
         register(new CancelledState());
     }

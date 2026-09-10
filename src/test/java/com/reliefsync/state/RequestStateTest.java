@@ -26,6 +26,9 @@ class RequestStateTest {
         assertThrows(IllegalStateException.class, draft::dispatch);
         assertThrows(IllegalStateException.class, draft::deliver);
         assertThrows(IllegalStateException.class, draft::reallocate);
+        assertThrows(IllegalStateException.class, draft::deliveryFailed);
+        assertThrows(IllegalStateException.class, draft::retryDelivery);
+        assertThrows(IllegalStateException.class, draft::returnForReallocation);
         assertThrows(IllegalStateException.class, () -> draft.verdict(true, true));
     }
 
@@ -45,6 +48,17 @@ class RequestStateTest {
     }
 
     @Test
+    void failedDeliveryCanRetryOrReturnForReallocation() {
+        RequestState dispatched = RequestStates.of(RequestStatus.DISPATCHED);
+        assertEquals(RequestStatus.DELIVERY_FAILED, dispatched.deliveryFailed());
+        RequestState failed = RequestStates.of(RequestStatus.DELIVERY_FAILED);
+        assertEquals(RequestStatus.DISPATCHED, failed.retryDelivery());
+        assertEquals(RequestStatus.ALLOCATED, failed.returnForReallocation());
+        assertThrows(IllegalStateException.class, failed::deliver);
+        assertThrows(IllegalStateException.class, failed::deliveryFailed);
+    }
+
+    @Test
     void allocatedCanReallocateOrCancelBeforeDispatch() {
         RequestState allocated = RequestStates.of(RequestStatus.ALLOCATED);
         assertEquals(RequestStatus.ALLOCATED, allocated.reallocate());
@@ -56,7 +70,8 @@ class RequestStateTest {
 
     @Test
     void dispatchAndDeliveryBlockCancellationAndReallocation() {
-        for (RequestStatus status : new RequestStatus[] {RequestStatus.DISPATCHED, RequestStatus.DELIVERED}) {
+        for (RequestStatus status : new RequestStatus[] {
+                RequestStatus.DISPATCHED, RequestStatus.DELIVERY_FAILED, RequestStatus.DELIVERED}) {
             assertThrows(IllegalStateException.class, () -> RequestStates.of(status).cancel());
             assertThrows(IllegalStateException.class, () -> RequestStates.of(status).reallocate());
         }
@@ -73,6 +88,9 @@ class RequestStateTest {
             assertThrows(IllegalStateException.class, state::deliver);
             assertThrows(IllegalStateException.class, state::cancel);
             assertThrows(IllegalStateException.class, state::reallocate);
+            assertThrows(IllegalStateException.class, state::deliveryFailed);
+            assertThrows(IllegalStateException.class, state::retryDelivery);
+            assertThrows(IllegalStateException.class, state::returnForReallocation);
         }
     }
 }

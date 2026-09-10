@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.reliefsync.db.Database;
 import com.reliefsync.model.DispatchManifest;
+import com.reliefsync.model.DeliveryFailure;
+import com.reliefsync.model.DeliveryRecoveryAction;
 import com.reliefsync.model.DraftItem;
 import com.reliefsync.model.ManifestStatus;
 import com.reliefsync.model.Priority;
@@ -16,7 +18,9 @@ import com.reliefsync.model.Role;
 import com.reliefsync.model.User;
 import com.reliefsync.model.VehicleStatus;
 import com.reliefsync.repository.AreaRepository;
+import com.reliefsync.repository.AllocationRepository;
 import com.reliefsync.repository.CenterRepository;
+import com.reliefsync.repository.DeliveryFailureRepository;
 import com.reliefsync.repository.DispatchManifestRepository;
 import com.reliefsync.repository.InventoryRepository;
 import com.reliefsync.repository.RequestRepository;
@@ -41,6 +45,9 @@ class DispatchServiceIntegrationTest {
     private final VehicleService vehicleService = new VehicleService();
     private final VehicleRepository vehicles = new VehicleRepository();
     private final DispatchManifestRepository manifests = new DispatchManifestRepository();
+    private final DeliveryFailureRepository failures = new DeliveryFailureRepository();
+    private final AllocationRepository allocations = new AllocationRepository();
+    private final InventoryRepository inventory = new InventoryRepository();
     private final RequestRepository requests = new RequestRepository();
 
     private User volunteer;
@@ -84,6 +91,16 @@ class DispatchServiceIntegrationTest {
         requestService.decideVerification(reliefCoordinator, id, true, "");
         allocationService.allocate(reliefCoordinator, id, "Fewest Centers");
         return id;
+    }
+
+    private long dispatchedRequest(int quantity, long vehicleId) {
+        long requestId = allocatedRequest(quantity);
+        dispatchService.dispatch(transport, requestId, vehicleId, "Initial Driver");
+        return requestId;
+    }
+
+    private int totalInventory() {
+        return inventory.availableStock().stream().mapToInt(stock -> stock.quantity()).sum();
     }
 
     @Test
@@ -218,5 +235,191 @@ class DispatchServiceIntegrationTest {
 
         assertThrows(IllegalStateException.class, () -> dispatchService.deliver(transport, requestId));
         assertEquals(RequestStatus.DISPATCHED, requestService.load(requestId).status());
+    }
+
+    @Test
+    void reportFailureStoresAuditAndReleasesVehicleButNotInventory() {
+        long vehicleId = vehicleService.save(transport, null, "FAIL-1", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        int stockAfterAllocation = totalInventory();
+
+        dispatchService.reportDeliveryFailure(transport, requestId, "  Bridge   became impassable  ",
+                DeliveryRecoveryAction.RETRY, "Wait for clearance");
+
+        assertEquals(RequestStatus.DELIVERY_FAILED, requestService.load(requestId).status());
+        DispatchManifest manifest = manifests.findByRequest(requestId).orElseThrow();
+        assertEquals(ManifestStatus.DELIVERY_FAILED, manifest.status());
+        assertNotNull(manifest.failedAt());
+        assertEquals(VehicleStatus.AVAILABLE, vehicles.findById(vehicleId).orElseThrow().status());
+        assertEquals(stockAfterAllocation, totalInventory());
+        DeliveryFailure failure = failures.latestForRequest(requestId).orElseThrow();
+        assertEquals("Bridge became impassable", failure.reason());
+        assertEquals(transport.id(), failure.reportedBy());
+        assertEquals("Transport Coordinator", failure.reporterName());
+        assertEquals(DeliveryRecoveryAction.RETRY, failure.recoveryAction());
+        assertEquals("Wait for clearance", failure.recoveryNotes());
+        assertFalse(failure.resolved());
+        assertNotNull(failure.reportedAt());
+        assertTrue(requests.history(requestId).stream().anyMatch(change ->
+                RequestStatus.DISPATCHED.name().equals(change.fromStatus())
+                        && RequestStatus.DELIVERY_FAILED.name().equals(change.toStatus())));
+
+        assertThrows(IllegalStateException.class, () -> dispatchService.reportDeliveryFailure(
+                transport, requestId, "Duplicate", DeliveryRecoveryAction.RETRY, null));
+        assertThrows(IllegalStateException.class, () -> dispatchService.deliver(transport, requestId));
+    }
+
+    @Test
+    void retryPreservesFailedAttemptAndCreatesNewAttemptWithSameVehicle() {
+        long vehicleId = vehicleService.save(transport, null, "RETRY-1", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        long failedManifestId = manifests.findByRequest(requestId).orElseThrow().id();
+        dispatchService.reportDeliveryFailure(transport, requestId, "Road blocked",
+                DeliveryRecoveryAction.RETRY, null);
+
+        dispatchService.retryDelivery(transport, requestId, vehicleId, "Retry Driver");
+
+        assertEquals(RequestStatus.DISPATCHED, requestService.load(requestId).status());
+        List<DispatchManifest> attempts = manifests.allForRequest(requestId);
+        assertEquals(2, attempts.size());
+        assertEquals(failedManifestId, attempts.get(0).id());
+        assertEquals(ManifestStatus.DELIVERY_FAILED, attempts.get(0).status());
+        assertEquals(1, attempts.get(0).attemptNumber());
+        assertEquals(ManifestStatus.DISPATCHED, attempts.get(1).status());
+        assertEquals(2, attempts.get(1).attemptNumber());
+        assertEquals("Retry Driver", attempts.get(1).driverName());
+        assertEquals(1, manifests.items(attempts.get(1).id()).size());
+        assertEquals(VehicleStatus.IN_TRANSIT, vehicles.findById(vehicleId).orElseThrow().status());
+        assertTrue(failures.latestForRequest(requestId).orElseThrow().resolved());
+    }
+
+    @Test
+    void retryWithReplacementVehicleValidatesCapacityAndRollsBackCleanly() {
+        long original = vehicleService.save(transport, null, "ORIGINAL-1", "Truck", 200);
+        long tooSmall = vehicleService.save(transport, null, "SMALL-RETRY", "Van", 49);
+        long replacement = vehicleService.save(transport, null, "REPLACE-1", "Truck", 100);
+        long requestId = dispatchedRequest(50, original);
+        dispatchService.reportDeliveryFailure(transport, requestId, "Engine problem",
+                DeliveryRecoveryAction.RETRY, null);
+
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.retryDelivery(transport, requestId, tooSmall, "Driver"));
+        assertEquals(RequestStatus.DELIVERY_FAILED, requestService.load(requestId).status());
+        assertEquals(1, manifests.allForRequest(requestId).size());
+        assertEquals(VehicleStatus.AVAILABLE, vehicles.findById(tooSmall).orElseThrow().status());
+        assertFalse(failures.latestForRequest(requestId).orElseThrow().resolved());
+
+        dispatchService.retryDelivery(transport, requestId, replacement, "Replacement Driver");
+        DispatchManifest latest = manifests.findByRequest(requestId).orElseThrow();
+        assertEquals(replacement, latest.vehicleId());
+        assertEquals(ManifestStatus.DISPATCHED, latest.status());
+        assertEquals(VehicleStatus.AVAILABLE, vehicles.findById(original).orElseThrow().status());
+        assertEquals(VehicleStatus.IN_TRANSIT, vehicles.findById(replacement).orElseThrow().status());
+    }
+
+    @Test
+    void retryDatabaseFailureLeavesFailedRequestAndVehicleUnchanged() throws Exception {
+        long original = vehicleService.save(transport, null, "RETRY-ROLLBACK-OLD", "Truck", 100);
+        long replacement = vehicleService.save(transport, null, "RETRY-ROLLBACK-NEW", "Truck", 100);
+        long requestId = dispatchedRequest(50, original);
+        dispatchService.reportDeliveryFailure(transport, requestId, "Vehicle unavailable",
+                DeliveryRecoveryAction.RETRY, null);
+        try (var statement = Database.getInstance().connection().createStatement()) {
+            statement.execute("CREATE TRIGGER reject_retry_item BEFORE INSERT ON dispatch_manifest_items "
+                    + "BEGIN SELECT RAISE(ABORT, 'forced retry failure'); END");
+        }
+
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.retryDelivery(transport, requestId, replacement, "New Driver"));
+        assertEquals(RequestStatus.DELIVERY_FAILED, requestService.load(requestId).status());
+        assertEquals(1, manifests.allForRequest(requestId).size());
+        assertEquals(ManifestStatus.DELIVERY_FAILED, manifests.findByRequest(requestId).orElseThrow().status());
+        assertEquals(VehicleStatus.AVAILABLE, vehicles.findById(replacement).orElseThrow().status());
+        assertFalse(failures.latestForRequest(requestId).orElseThrow().resolved());
+    }
+
+    @Test
+    void returnForReallocationRestoresStockOnceAndLeavesAuditTrail() {
+        long vehicleId = vehicleService.save(transport, null, "REALLOC-1", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        assertEquals(100, totalInventory());
+        dispatchService.reportDeliveryFailure(transport, requestId, "Destination inaccessible",
+                DeliveryRecoveryAction.REALLOCATE, "Cargo returned to the center");
+
+        ReallocationRecoveryResult result = dispatchService.returnForReallocation(
+                reliefCoordinator, requestId, "Stock checked and returned");
+
+        assertEquals(1, result.releasedAllocations());
+        assertEquals(50, result.releasedQuantity());
+        assertEquals(150, totalInventory());
+        assertEquals(RequestStatus.ALLOCATED, requestService.load(requestId).status());
+        assertTrue(allocations.activeForRequest(requestId).isEmpty());
+        assertEquals(0, requests.items(requestId).getFirst().quantityAllocated());
+        assertEquals(1, allocations.eventsForRequest(requestId).stream()
+                .filter(event -> event.eventType() == com.reliefsync.model.AllocationEventType.RELEASED).count());
+        assertTrue(failures.latestForRequest(requestId).orElseThrow().resolved());
+        assertEquals("Stock checked and returned",
+                failures.latestForRequest(requestId).orElseThrow().recoveryNotes());
+        assertThrows(IllegalStateException.class, () -> dispatchService.returnForReallocation(
+                reliefCoordinator, requestId, null));
+        assertEquals(150, totalInventory());
+
+        allocationService.reallocate(reliefCoordinator, requestId, "Fewest Centers");
+        assertEquals(50, requests.items(requestId).getFirst().quantityAllocated());
+    }
+
+    @Test
+    void recoveryActionAndPermissionsAreEnforced() {
+        long vehicleId = vehicleService.save(transport, null, "AUTH-FAIL", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.retryDelivery(transport, requestId, vehicleId, "Driver"));
+        assertThrows(IllegalStateException.class, () -> dispatchService.reportDeliveryFailure(
+                volunteer, requestId, "No access", DeliveryRecoveryAction.RETRY, null));
+        assertThrows(IllegalArgumentException.class, () -> dispatchService.reportDeliveryFailure(
+                transport, requestId, " ", DeliveryRecoveryAction.RETRY, null));
+        dispatchService.reportDeliveryFailure(transport, requestId, "Route unavailable",
+                DeliveryRecoveryAction.REALLOCATE, null);
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.retryDelivery(transport, requestId, vehicleId, "Driver"));
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.returnForReallocation(transport, requestId, null));
+    }
+
+    @Test
+    void failureReportingRollbackRestoresManifestVehicleAndRequest() throws Exception {
+        long vehicleId = vehicleService.save(transport, null, "ROLLBACK-FAIL", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        try (var statement = Database.getInstance().connection().createStatement()) {
+            statement.execute("CREATE TRIGGER reject_failure BEFORE INSERT ON delivery_failures "
+                    + "BEGIN SELECT RAISE(ABORT, 'forced failure audit error'); END");
+        }
+
+        assertThrows(IllegalStateException.class, () -> dispatchService.reportDeliveryFailure(
+                transport, requestId, "Road closed", DeliveryRecoveryAction.RETRY, null));
+        assertEquals(RequestStatus.DISPATCHED, requestService.load(requestId).status());
+        assertEquals(ManifestStatus.DISPATCHED, manifests.findByRequest(requestId).orElseThrow().status());
+        assertEquals(VehicleStatus.IN_TRANSIT, vehicles.findById(vehicleId).orElseThrow().status());
+        assertTrue(failures.forRequest(requestId).isEmpty());
+    }
+
+    @Test
+    void reallocationRollbackPreventsPartialStockReturn() throws Exception {
+        long vehicleId = vehicleService.save(transport, null, "ROLLBACK-REALLOC", "Truck", 100);
+        long requestId = dispatchedRequest(50, vehicleId);
+        dispatchService.reportDeliveryFailure(transport, requestId, "Area evacuated",
+                DeliveryRecoveryAction.REALLOCATE, null);
+        try (var statement = Database.getInstance().connection().createStatement()) {
+            statement.execute("CREATE TRIGGER reject_release_event BEFORE INSERT ON allocation_events "
+                    + "WHEN NEW.event_type='RELEASED' "
+                    + "BEGIN SELECT RAISE(ABORT, 'forced release audit error'); END");
+        }
+
+        assertThrows(IllegalStateException.class,
+                () -> dispatchService.returnForReallocation(reliefCoordinator, requestId, null));
+        assertEquals(RequestStatus.DELIVERY_FAILED, requestService.load(requestId).status());
+        assertEquals(100, totalInventory());
+        assertEquals(1, allocations.activeForRequest(requestId).size());
+        assertFalse(failures.latestForRequest(requestId).orElseThrow().resolved());
     }
 }

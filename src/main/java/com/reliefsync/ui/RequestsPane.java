@@ -6,6 +6,7 @@ import com.reliefsync.model.Allocation;
 import com.reliefsync.model.AllocationEvent;
 import com.reliefsync.model.DispatchManifest;
 import com.reliefsync.model.DispatchManifestItem;
+import com.reliefsync.model.DeliveryFailure;
 import com.reliefsync.model.DraftItem;
 import com.reliefsync.model.Priority;
 import com.reliefsync.model.RequestItem;
@@ -295,23 +296,45 @@ class RequestsPane extends ContentPane {
                         .append(" at ").append(event.occurredAt()).append("\n");
             }
         }
-        DispatchManifest manifest = facade.manifest(requestId).orElse(null);
-        if (manifest != null) {
-            sb.append("\nDispatch manifest:\n")
-                    .append("  - Vehicle: ").append(manifest.vehicleRegistration())
-                    .append(" (").append(manifest.vehicleType()).append(", capacity ")
-                    .append(manifest.vehicleCapacity()).append(")\n")
-                    .append("  - Driver: ").append(manifest.driverName()).append("\n")
-                    .append("  - Status: ").append(manifest.status()).append("\n")
-                    .append("  - Load: ").append(manifest.totalLoad()).append(" generic capacity units\n")
-                    .append("  - Dispatched: ").append(manifest.dispatchedAt()).append("\n");
-            if (manifest.deliveredAt() != null) {
-                sb.append("  - Delivered: ").append(manifest.deliveredAt()).append("\n");
+        List<DispatchManifest> attempts = facade.dispatchAttempts(requestId);
+        if (!attempts.isEmpty()) {
+            sb.append("\nDispatch attempts:\n");
+            for (DispatchManifest manifest : attempts) {
+                sb.append("  Attempt #").append(manifest.attemptNumber()).append(" — ")
+                        .append(manifest.status()).append("\n")
+                        .append("    Vehicle: ").append(manifest.vehicleRegistration())
+                        .append(" (").append(manifest.vehicleType()).append(", capacity ")
+                        .append(manifest.vehicleCapacity()).append(")\n")
+                        .append("    Driver: ").append(manifest.driverName()).append("\n")
+                        .append("    Load: ").append(manifest.totalLoad()).append(" generic capacity units\n")
+                        .append("    Dispatched: ").append(manifest.dispatchedAt()).append("\n");
+                if (manifest.failedAt() != null) {
+                    sb.append("    Failed: ").append(manifest.failedAt()).append("\n");
+                }
+                if (manifest.deliveredAt() != null) {
+                    sb.append("    Delivered: ").append(manifest.deliveredAt()).append("\n");
+                }
+                sb.append("    Pickup lines:\n");
+                for (DispatchManifestItem item : facade.manifestItems(manifest.id())) {
+                    sb.append("      ").append(item.centerName()).append(": ")
+                            .append(item.quantity()).append(" × ").append(item.resourceName()).append("\n");
+                }
             }
-            sb.append("  - Pickup lines:\n");
-            for (DispatchManifestItem item : facade.manifestItems(manifest.id())) {
-                sb.append("      ").append(item.centerName()).append(": ")
-                        .append(item.quantity()).append(" × ").append(item.resourceName()).append("\n");
+        }
+        List<DeliveryFailure> failures = facade.deliveryFailures(requestId);
+        if (!failures.isEmpty()) {
+            sb.append("\nDelivery failure history:\n");
+            for (DeliveryFailure failure : failures) {
+                sb.append("  - Attempt #").append(failure.attemptNumber()).append(": ")
+                        .append(failure.reason()).append("\n")
+                        .append("    Reported by ").append(failure.reporterName())
+                        .append(" at ").append(failure.reportedAt()).append("\n")
+                        .append("    Recovery: ").append(failure.recoveryAction().label())
+                        .append(failure.resolved() ? " — resolved " + failure.resolvedAt() : " — pending")
+                        .append("\n");
+                if (failure.recoveryNotes() != null) {
+                    sb.append("    Notes: ").append(failure.recoveryNotes()).append("\n");
+                }
             }
         }
         sb.append("\nStatus history:\n");

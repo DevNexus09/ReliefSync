@@ -74,7 +74,7 @@ final class Ui {
             case "DRAFT" -> "#8a93a3";
             case "SUBMITTED", "LOW", "HIGH", "MAINTENANCE" -> "#d98f0b";
             case "VERIFIED" -> "#3b82f6";
-            case "REJECTED", "OUT OF STOCK", "CRITICAL" -> "#d64545";
+            case "REJECTED", "DELIVERY_FAILED", "OUT OF STOCK", "CRITICAL" -> "#d64545";
             case "ALLOCATED" -> "#8b5cf6";
             case "DISPATCHED", "IN_TRANSIT" -> "#0e9aa7";
             case "DELIVERED", "OK", "AVAILABLE" -> "#1b9e4b";

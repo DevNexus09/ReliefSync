@@ -33,16 +33,19 @@ erDiagram
     RELIEF_REQUESTS ||--o{ ALLOCATIONS : "fulfilled by"
     RELIEF_REQUESTS ||--o{ ALLOCATION_EVENTS : "allocation audited by"
     RELIEF_REQUESTS ||--o{ STATUS_HISTORY : "audited by"
-    RELIEF_REQUESTS ||--o| DISPATCH_MANIFESTS : "dispatched with"
+    RELIEF_REQUESTS ||--o{ DISPATCH_MANIFESTS : "dispatched with attempts"
+    RELIEF_REQUESTS ||--o{ DELIVERY_FAILURES : "records"
     RESOURCES ||--o{ REQUEST_ITEMS : "requested as"
     RESOURCES ||--o{ INVENTORY : "stocked as"
     RESOURCES ||--o{ ALLOCATIONS : "allocated as"
     ALLOCATIONS ||--o{ ALLOCATION_EVENTS : "records events"
-    ALLOCATIONS ||--o| DISPATCH_MANIFEST_ITEMS : "loaded as"
+    ALLOCATIONS ||--o{ DISPATCH_MANIFEST_ITEMS : "loaded across attempts"
     RELIEF_CENTERS ||--o{ INVENTORY : holds
     RELIEF_CENTERS ||--o{ ALLOCATIONS : supplies
     VEHICLES ||--o{ DISPATCH_MANIFESTS : carries
     DISPATCH_MANIFESTS ||--|{ DISPATCH_MANIFEST_ITEMS : contains
+    DISPATCH_MANIFESTS ||--o| DELIVERY_FAILURES : "may fail as"
+    USERS ||--o{ DELIVERY_FAILURES : reports
 
     USERS { int id PK "username UNIQUE, role, password_hash (PBKDF2)" }
     AFFECTED_AREAS { int id PK "name UNIQUE, district, population, severity 1-5, active" }
@@ -55,8 +58,9 @@ erDiagram
     ALLOCATIONS { int id PK "request_id FK, center_id FK, resource_id FK, quantity > 0, strategy, active, release metadata" }
     ALLOCATION_EVENTS { int id PK "request_id FK, allocation_id FK, event type, quantity, actor, timestamp" }
     VEHICLES { int id PK "registration UNIQUE, type, capacity > 0, availability status" }
-    DISPATCH_MANIFESTS { int id PK "request_id UNIQUE, vehicle_id FK, driver, status, timestamps" }
-    DISPATCH_MANIFEST_ITEMS { int id PK "manifest_id FK, allocation_id UNIQUE FK, quantity > 0" }
+    DISPATCH_MANIFESTS { int id PK "request_id FK + attempt_number UNIQUE, vehicle_id FK, driver, status, timestamps" }
+    DISPATCH_MANIFEST_ITEMS { int id PK "manifest_id + allocation_id UNIQUE, quantity > 0" }
+    DELIVERY_FAILURES { int id PK "request_id FK, manifest_id UNIQUE FK, reason, reporter FK, recovery action, timestamps" }
     STATUS_HISTORY { int id PK "request_id FK, from_status, to_status, changed_by, changed_at" }
 ```
 
@@ -79,6 +83,9 @@ stateDiagram-v2
     ALLOCATED --> ALLOCATED : reallocate outstanding need
     ALLOCATED --> DISPATCHED : dispatch
     DISPATCHED --> DELIVERED : confirm delivery
+    DISPATCHED --> DELIVERY_FAILED : report failure
+    DELIVERY_FAILED --> DISPATCHED : retry with vehicle
+    DELIVERY_FAILED --> ALLOCATED : release recoverable stock\nfor reallocation
     DRAFT --> CANCELLED : cancel
     SUBMITTED --> CANCELLED : cancel
     VERIFIED --> CANCELLED : cancel
@@ -87,8 +94,12 @@ stateDiagram-v2
 
 Verification rounds by priority: NORMAL → Area Coordinator; HIGH → + Relief Coordinator; CRITICAL → + Administrator. The administrator may act for any round.
 
-## Transport and capacity
+## Transport, failure recovery, and capacity
 
-Dispatch is one atomic operation: validate the ALLOCATED state, load active reservations, validate driver and capacity, conditionally claim an AVAILABLE vehicle, create its manifest and allocation-backed pickup lines, and transition the request to DISPATCHED. Delivery atomically completes the manifest, transitions the request to DELIVERED, and returns the vehicle to AVAILABLE.
+Dispatch is one atomic operation: validate the ALLOCATED state, load active reservations, validate driver and capacity, conditionally claim an AVAILABLE vehicle, create a numbered manifest attempt and its allocation-backed pickup lines, and transition the request to DISPATCHED. Delivery atomically completes the latest manifest, transitions the request to DELIVERED, and returns the vehicle to AVAILABLE.
 
-Vehicle availability follows `AVAILABLE → IN_TRANSIT → AVAILABLE`; `MAINTENANCE` and `INACTIVE` vehicles cannot be dispatched. Capacity uses generic academic load units: the sum of active allocated quantities must not exceed vehicle capacity. Manifest lines retain the original allocation links, so multi-center pickup details remain auditable without route optimization.
+Failure reporting is also atomic: the latest manifest becomes `DELIVERY_FAILED`, a reason/reporter/time/recovery record is inserted, the request enters `DELIVERY_FAILED`, and the vehicle returns to `AVAILABLE`. Reserved inventory is deliberately unchanged at this point. A RETRY recovery claims an available capacity-safe vehicle, creates the next immutable manifest attempt from the active reservations, resolves the failure, and returns the request to `DISPATCHED`.
+
+REALLOCATE represents the explicit domain assertion that the failed cargo was physically recovered. An allocation-authorized coordinator performs one transaction that returns each active reservation to its source inventory, marks it released, adjusts request-item totals, records `RELEASED` allocation events, resolves the failure, and moves the request to `ALLOCATED`. The existing reallocation strategy can then reserve stock again. State and conditional repository updates prevent a second recovery from returning the same stock twice.
+
+Vehicle availability follows `AVAILABLE → IN_TRANSIT → AVAILABLE` for delivery, failure, and retry; `MAINTENANCE` and `INACTIVE` vehicles cannot be dispatched. Capacity uses generic academic load units: the sum of active allocated quantities must not exceed vehicle capacity. Manifest lines retain their allocation links, and failed attempts are never overwritten, so vehicle changes and multi-center pickup details remain auditable without route optimization.

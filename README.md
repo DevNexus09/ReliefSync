@@ -15,24 +15,26 @@ During a disaster, several affected areas request food, water, medicine, and she
 
 ```text
 Draft → Submitted → Verified → Allocated → Dispatched → Delivered
-            ↓ (reject)          ↓ (cancel releases reserved stock)
-        Rejected                         Cancelled
+            ↓ (reject)          ↓ (cancel)      ↓ (failure)
+        Rejected             Cancelled     Delivery Failed
+                                             ↙       ↘
+                                          Retry   Reallocate
 ```
 
 ## What is implemented
 
-- SQLite persistence with versioned migrations and a meaningful 14-table schema, including reversible allocations, allocation audit events, vehicles, and dispatch manifests
+- SQLite persistence with versioned migrations and a meaningful 15-table schema, including reversible allocations, allocation audit events, vehicles, dispatch attempts, and delivery failures
 - PBKDF2 password hashing, persistent login and self-service signup, and centralized role-permission authorization for six roles; public signup safely creates Volunteer accounts only
 - CRUD with validation and non-destructive activate/deactivate for affected areas, relief centers, resources, and transport vehicles
 - Transactional inventory set/receive/issue with calculated low-stock status
 - **Workflow 1 — request verification:** multi-item drafts, probable-duplicate warnings, submission, and a Chain of Responsibility that requires 1/2/3 human approval rounds for Normal/High/Critical priority, with immutable verification history
-- **Workflow 2 — allocation to delivery:** strategy-based allocation planning with preview, transactional stock reservation with shortage reporting, later reallocation of outstanding need, cancellation with atomic stock release, capacity-validated vehicle dispatch manifests, and delivery confirmation that releases the vehicle
+- **Workflow 2 — allocation to delivery and recovery:** strategy-based allocation planning with preview, transactional stock reservation, later reallocation of outstanding need, cancellation with atomic stock release, capacity-validated dispatch attempts, delivery confirmation, and a `DELIVERY_FAILED` path that supports vehicle-backed retry or explicit stock return for reallocation
 - Reports and search: low-stock report, requests-by-status summary, fulfillment-by-area analysis, and bounded parameterized request search
 - Optional, idempotent demo seeding that drives the real services to leave requests resting in five different lifecycle states; full status-history audit trail per request
 - A styled interface (`src/main/resources/app.css`): dark sidebar with active-item highlighting, dashboard cards, and color-coded status/priority badges throughout
-- 51 JUnit tests covering authentication/signup, the patterns, validation, backward-compatible migrations, idempotent demo data, rollback-safe reservation release, reallocation, vehicle assignment, dispatch manifests, and end-to-end workflows against a real SQLite database
+- 61 JUnit tests covering authentication/signup, the patterns, validation, backward-compatible migrations through schema v4, idempotent demo data, rollback-safe reservation release, reallocation, vehicle assignment, dispatch attempts, delivery failure/retry/recovery, and end-to-end workflows against a real SQLite database
 
-## Screens (6)
+## Screens (7)
 
 Login and Signup · Dashboard · Master Data (areas / centers / resources / vehicles) · Inventory · Relief Requests (draft + verification) · Allocation & Dispatch · Reports & Search
 
@@ -61,7 +63,7 @@ mvn clean test
 mvn javafx:run
 ```
 
-Normal startup migrates the database and allows a new user to register as a Volunteer from the **Sign up** tab. For role-specific local demonstrations, start once with seeding enabled:
+Normal startup migrates the database and allows a new user to register as a Volunteer from the **Sign up** option. For role-specific local demonstrations, start once with seeding enabled:
 
 ```bash
 RELIEFSYNC_SEED_DEMO=true mvn javafx:run
@@ -94,7 +96,7 @@ Seeding also creates two vehicles with different capacities/statuses and five de
 2. Open **Relief Requests** and press **Details** on the DELIVERED request to see its three verification rounds and its full status-history audit trail.
 3. Log in as `volunteer`, create a new HIGH-priority draft with two items, and submit it. Picking an area that already has an open request triggers the duplicate warning.
 4. Log in as `area_coordinator` and approve — the request stays SUBMITTED because a HIGH request needs a second round (Chain of Responsibility). Log in as `relief_coordinator` to approve round 2; it becomes VERIFIED.
-5. Allocate it, then log in as `transport`. Select an available vehicle, enter the driver name, review the load/capacity check, dispatch, and confirm delivery. Open **Details** to inspect the permanent multi-center manifest, then check **Reports** for the stock impact and fulfillment percentages.
+5. Allocate it, then log in as `transport`. Select an available vehicle, enter the driver name, review the load/capacity check, and dispatch. You can confirm delivery, or report a failure with a reason and recovery action. A retry creates a new immutable dispatch attempt; a reallocation recovery is completed by `relief_coordinator` and returns explicitly recoverable stock before a new allocation. Open **Details** to inspect every attempt and failure record.
 
 Vehicle capacity is intentionally modeled as generic load units for this compact academic application: each allocated resource quantity consumes one capacity unit, even though real resources use different physical units.
 

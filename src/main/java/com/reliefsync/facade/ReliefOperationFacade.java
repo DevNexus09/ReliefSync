@@ -3,6 +3,8 @@ package com.reliefsync.facade;
 import com.reliefsync.model.Allocation;
 import com.reliefsync.model.AllocationEvent;
 import com.reliefsync.model.DraftItem;
+import com.reliefsync.model.DeliveryFailure;
+import com.reliefsync.model.DeliveryRecoveryAction;
 import com.reliefsync.model.DispatchManifest;
 import com.reliefsync.model.DispatchManifestItem;
 import com.reliefsync.model.Priority;
@@ -15,6 +17,7 @@ import com.reliefsync.model.Verification;
 import com.reliefsync.model.Vehicle;
 import com.reliefsync.model.VehicleStatus;
 import com.reliefsync.repository.AllocationRepository;
+import com.reliefsync.repository.DeliveryFailureRepository;
 import com.reliefsync.repository.DispatchManifestRepository;
 import com.reliefsync.repository.RequestRepository;
 import com.reliefsync.repository.VerificationRepository;
@@ -23,6 +26,7 @@ import com.reliefsync.service.AllocationService;
 import com.reliefsync.service.CancellationResult;
 import com.reliefsync.service.DispatchService;
 import com.reliefsync.service.RequestService;
+import com.reliefsync.service.ReallocationRecoveryResult;
 import com.reliefsync.service.VehicleService;
 import com.reliefsync.strategy.AllocationStrategies;
 import com.reliefsync.verification.VerificationOutcome;
@@ -43,6 +47,7 @@ public class ReliefOperationFacade {
     private final RequestRepository requests = new RequestRepository();
     private final VerificationRepository verifications = new VerificationRepository();
     private final AllocationRepository allocations = new AllocationRepository();
+    private final DeliveryFailureRepository deliveryFailures = new DeliveryFailureRepository();
     private final DispatchManifestRepository manifests = new DispatchManifestRepository();
 
     // ---- Request workflow ----
@@ -97,6 +102,19 @@ public class ReliefOperationFacade {
         dispatchService.deliver(actor, requestId);
     }
 
+    public void reportDeliveryFailure(User actor, long requestId, String reason,
+                                      DeliveryRecoveryAction action, String recoveryNotes) {
+        dispatchService.reportDeliveryFailure(actor, requestId, reason, action, recoveryNotes);
+    }
+
+    public void retryDelivery(User actor, long requestId, long vehicleId, String driverName) {
+        dispatchService.retryDelivery(actor, requestId, vehicleId, driverName);
+    }
+
+    public ReallocationRecoveryResult returnForReallocation(User actor, long requestId, String recoveryNotes) {
+        return dispatchService.returnForReallocation(actor, requestId, recoveryNotes);
+    }
+
     // ---- Vehicles and dispatch manifests ----
 
     public List<Vehicle> vehicles(User actor, String search) {
@@ -120,8 +138,20 @@ public class ReliefOperationFacade {
         return manifests.findByRequest(requestId);
     }
 
+    public List<DispatchManifest> dispatchAttempts(long requestId) {
+        return manifests.allForRequest(requestId);
+    }
+
     public List<DispatchManifestItem> manifestItems(long manifestId) {
         return manifests.items(manifestId);
+    }
+
+    public Optional<DeliveryFailure> latestDeliveryFailure(long requestId) {
+        return deliveryFailures.latestForRequest(requestId);
+    }
+
+    public List<DeliveryFailure> deliveryFailures(long requestId) {
+        return deliveryFailures.forRequest(requestId);
     }
 
     // ---- Read models for the UI ----
