@@ -7,7 +7,6 @@ import com.reliefsync.service.InventoryService;
 import com.reliefsync.service.MasterDataService;
 import com.reliefsync.service.Session;
 import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -40,7 +39,7 @@ class InventoryPane extends ContentPane {
         centerBox.setOnAction(e -> reloadStock());
         HBox top = new HBox(10, new Label("Relief center:"), centerBox);
         top.setAlignment(Pos.CENTER_LEFT);
-        top.setPadding(new Insets(0, 0, 10, 0));
+        top.getStyleClass().add("toolbar");
 
         quantityField.setPromptText("Amount");
         quantityField.setPrefWidth(90);
@@ -65,10 +64,11 @@ class InventoryPane extends ContentPane {
         HBox form = new HBox(10, new Label("Resource:"), resourceBox, quantityField,
                 setButton, receiveButton, issueButton);
         form.setAlignment(Pos.CENTER_LEFT);
-        form.setPadding(new Insets(10, 0, 0, 0));
+        form.getStyleClass().add("form-bar");
 
-        VBox box = new VBox(Ui.heading("Inventory"), top, table, form);
-        box.setSpacing(8);
+        VBox box = new VBox(Ui.heading("Inventory"),
+                Ui.subtitle("Monitor and adjust usable stock at each relief center."), top, table, form);
+        box.setSpacing(12);
         setCenter(box);
     }
 

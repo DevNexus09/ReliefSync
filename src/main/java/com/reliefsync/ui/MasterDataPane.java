@@ -44,7 +44,8 @@ class MasterDataPane extends ContentPane {
         if (AccessControl.can(Session.user().role(), Feature.VEHICLES)) {
             tabs.getTabs().add(vehicleTab());
         }
-        VBox box = new VBox(8, Ui.heading("Master Data"), tabs);
+        VBox box = new VBox(12, Ui.heading("Master Data"),
+                Ui.subtitle("Manage the reference records used throughout ReliefSync."), tabs);
         setCenter(box);
     }
 
@@ -332,8 +333,10 @@ class MasterDataPane extends ContentPane {
     private Tab buildTab(String title, TextField search, TableView<?> table, HBox form, HBox buttons) {
         form.setAlignment(Pos.CENTER_LEFT);
         buttons.setAlignment(Pos.CENTER_LEFT);
+        form.getStyleClass().add("form-fields");
+        buttons.getStyleClass().add("action-bar");
         VBox bottom = new VBox(8, new Label("Details"), form, buttons);
-        bottom.setPadding(new Insets(10, 0, 0, 0));
+        bottom.getStyleClass().add("form-bar");
         BorderPane pane = new BorderPane();
         pane.setTop(search);
         BorderPane.setMargin(search, new Insets(10, 0, 8, 0));

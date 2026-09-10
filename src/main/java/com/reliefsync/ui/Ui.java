@@ -25,6 +25,12 @@ final class Ui {
         return label;
     }
 
+    static Label subtitle(String text) {
+        Label label = new Label(text);
+        label.getStyleClass().add("screen-subtitle");
+        return label;
+    }
+
     static Button primary(Button button) {
         button.getStyleClass().add("primary-button");
         return button;

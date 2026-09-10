@@ -68,6 +68,7 @@ class ReportsPane extends ContentPane {
         searchField.setOnAction(e -> runSearch());
         HBox searchRow = new HBox(10, searchField, statusFilter, searchButton);
         searchRow.setAlignment(Pos.CENTER_LEFT);
+        searchRow.getStyleClass().add("toolbar");
         searchTable.getColumns().addAll(List.of(
                 Ui.col("#", RequestRow::id, 50),
                 Ui.col("Area", RequestRow::areaName, 200),
@@ -80,7 +81,8 @@ class ReportsPane extends ContentPane {
         Ui.fitColumns(searchTable);
         VBox searchBox = new VBox(8, searchRow, searchTable);
 
-        VBox box = new VBox(10, Ui.heading("Reports & Search"),
+        VBox box = new VBox(12, Ui.heading("Reports & Search"),
+                Ui.subtitle("Review stock risk, request progress, and fulfillment performance."),
                 new TitledPane("Low-stock report", lowStockTable),
                 new TitledPane("Requests by status", statusTable),
                 new TitledPane("Fulfillment by affected area", fulfillmentTable),

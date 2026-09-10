@@ -31,13 +31,15 @@ class DashboardPane extends ContentPane {
     DashboardPane() {
         VBox box = new VBox(16);
         box.setPadding(new Insets(4));
-        box.getChildren().add(Ui.heading("Operations Overview"));
+        box.getChildren().addAll(Ui.heading("Operations Overview"),
+                Ui.subtitle("Live operational health across requests, stock, and deliveries."));
 
         HBox cards = new HBox(14,
                 card(areasValue, "Active affected areas"),
                 card(openValue, "Open requests"),
                 card(lowStockValue, "Low-stock lines"),
                 card(deliveredValue, "Deliveries completed"));
+        cards.getStyleClass().add("stats-row");
         box.getChildren().add(cards);
 
         recentTable.getColumns().addAll(List.of(

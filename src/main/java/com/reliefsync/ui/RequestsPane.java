@@ -56,7 +56,8 @@ class RequestsPane extends ContentPane {
     private final TableView<RequestRow> table = new TableView<>();
 
     RequestsPane() {
-        VBox box = new VBox(10, Ui.heading("Relief Requests"));
+        VBox box = new VBox(12, Ui.heading("Relief Requests"),
+                Ui.subtitle("Create, verify, and track requests through their operational lifecycle."));
 
         if (AccessControl.can(Session.user().role(), Feature.REQUESTS)) {
             box.getChildren().add(draftSection());
@@ -128,8 +129,10 @@ class RequestsPane extends ContentPane {
 
         HBox headerRow = new HBox(10, new Label("Area:"), areaBox, new Label("Priority:"), priorityBox, noteField);
         headerRow.setAlignment(Pos.CENTER_LEFT);
+        headerRow.getStyleClass().add("form-fields");
         HBox itemRow = new HBox(10, new Label("Item:"), resourceBox, quantityField, addItem, removeItem, createDraft);
         itemRow.setAlignment(Pos.CENTER_LEFT);
+        itemRow.getStyleClass().add("action-bar");
         VBox content = new VBox(10, headerRow, itemRow, itemsTable);
         content.setPadding(new Insets(10));
 
@@ -152,6 +155,7 @@ class RequestsPane extends ContentPane {
         searchField.setOnAction(e -> reloadTable());
         HBox filterRow = new HBox(10, searchField, statusFilter, searchButton);
         filterRow.setAlignment(Pos.CENTER_LEFT);
+        filterRow.getStyleClass().add("toolbar");
 
         table.getColumns().addAll(List.of(
                 Ui.col("#", RequestRow::id, 50),
@@ -211,6 +215,7 @@ class RequestsPane extends ContentPane {
 
         HBox actionRow = new HBox(10);
         actionRow.getChildren().addAll(actions);
+        actionRow.getStyleClass().add("action-bar");
 
         return new VBox(8, filterRow, table, actionRow);
     }

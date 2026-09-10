@@ -249,15 +249,20 @@ class AllocationPane extends ContentPane {
 
         HBox strategyRow = new HBox(10, new Label("Strategy:"), strategyBox, strategyInfo);
         strategyRow.setAlignment(Pos.CENTER_LEFT);
+        strategyRow.getStyleClass().add("toolbar");
         HBox transportRow = new HBox(10, new Label("Vehicle:"), vehicleBox,
                 new Label("Driver:"), driverField, dispatch, retry, deliver);
         transportRow.setAlignment(Pos.CENTER_LEFT);
+        transportRow.getStyleClass().add("form-bar");
         HBox recoveryRow = new HBox(10, reportFailure, returnForReallocation);
         recoveryRow.setAlignment(Pos.CENTER_LEFT);
+        recoveryRow.getStyleClass().add("action-bar");
         HBox actionRow = new HBox(10, preview, allocate, reallocate, cancel);
         actionRow.setAlignment(Pos.CENTER_LEFT);
+        actionRow.getStyleClass().add("action-bar");
 
-        VBox box = new VBox(10, Ui.heading("Allocation & Dispatch"),
+        VBox box = new VBox(12, Ui.heading("Allocation & Dispatch"),
+                Ui.subtitle("Reserve stock, assign transport, and recover failed deliveries."),
                 requestTable, itemInfo, new Label("Existing reservations:"), reservationTable,
                 strategyRow, actionRow, new Label("Transport assignment:"), transportRow,
                 recoveryRow, transportInfo, planTable, planInfo);

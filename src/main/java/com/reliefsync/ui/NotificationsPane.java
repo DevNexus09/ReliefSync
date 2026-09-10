@@ -54,9 +54,10 @@ class NotificationsPane extends ContentPane {
         refresh.setOnAction(e -> Ui.guarded(this::refresh));
         HBox actions = new HBox(10, markOne, markAll, refresh);
         actions.setAlignment(Pos.CENTER_LEFT);
+        actions.getStyleClass().add("action-bar");
 
         VBox box = new VBox(12, Ui.heading("Notifications"),
-                new Label("Operational updates for your role and requests"), table, actions);
+                Ui.subtitle("Operational updates for your role and requests."), table, actions);
         box.setPadding(new Insets(4));
         VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
         setCenter(box);
