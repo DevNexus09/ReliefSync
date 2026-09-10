@@ -31,9 +31,9 @@ Draft → Submitted → Verified → Allocated → Dispatched → Delivered
 - **Workflow 2 — allocation to delivery and recovery:** strategy-based allocation planning with preview, transactional stock reservation, later reallocation of outstanding need, cancellation with atomic stock release, capacity-validated dispatch attempts, delivery confirmation, and a `DELIVERY_FAILED` path that supports vehicle-backed retry or explicit stock return for reallocation
 - **In-application notifications:** persistent role/ownership-targeted updates for requests awaiting verification, completed verification rounds, allocation/reallocation, true low-stock threshold crossings, delivery failures, and successful deliveries; users can view unread counts and mark one or all notifications read
 - Reports and search: low-stock report, requests-by-status summary, fulfillment-by-area analysis, and bounded parameterized request search
-- Optional, idempotent demo seeding that drives the real services to leave requests resting in five different lifecycle states; full status-history audit trail per request
+- Optional, idempotent Bangladesh-context demo seeding with 9 affected areas, 4 relief centers, 8 resources, 8 vehicles, and 16 labelled workflow scenarios covering every request state, strategy comparison, shortage, cancellation, retry, reallocation, low stock, and notifications
 - A styled interface (`src/main/resources/app.css`): dark sidebar with active-item highlighting, dashboard cards, and color-coded status/priority badges throughout
-- 74 JUnit tests covering authentication/signup, all patterns, validation, backward-compatible migrations through schema v5, notification recipients/idempotency/read state/rollback, low-stock re-arming, reservation release, reallocation, vehicles, dispatch attempts, delivery recovery, and end-to-end workflows against a real SQLite database
+- 76 JUnit tests covering authentication/signup, all patterns, validation, backward-compatible migrations through schema v5, notification recipients/idempotency/read state/rollback, realistic seed-data invariants, low-stock re-arming, reservation release, reallocation, vehicles, dispatch attempts, delivery recovery, and end-to-end workflows against a real SQLite database
 
 ## Screens (8)
 
@@ -90,15 +90,34 @@ All local demo accounts use password `ReliefSync@2026`:
 
 These are demo credentials only. Later runs can use plain `mvn javafx:run`; accounts persist in the local database at `data/reliefsync.db` (a runtime artifact, not committed).
 
-Seeding also creates two vehicles with different capacities/statuses and five demo requests resting in different states — one DELIVERED with a preserved dispatch manifest, one VERIFIED and awaiting allocation, one SUBMITTED mid-chain, one REJECTED, and one DRAFT — so the dashboard and reports have content on first launch.
+The realistic seed contains 32 center/resource inventory lines and 16 requests with 35 request items. Each request note starts with a stable demonstration key:
+
+| Key | Demonstration | Final state |
+|---|---|---|
+| `DEMO-R01` | Untouched request draft | DRAFT |
+| `DEMO-R02` | Normal request awaiting its verifier | SUBMITTED |
+| `DEMO-R03` | High request after round one | SUBMITTED |
+| `DEMO-R04` | Critical request after rounds one and two | SUBMITTED |
+| `DEMO-R05` | Verified request awaiting allocation | VERIFIED |
+| `DEMO-R06` | Allocation strategy comparison | VERIFIED |
+| `DEMO-R07` | Fully allocated request | ALLOCATED |
+| `DEMO-R08` | Active dispatch | DISPATCHED |
+| `DEMO-R09` | Successful delivered request | DELIVERED |
+| `DEMO-R10` | Rejected assessment | REJECTED |
+| `DEMO-R11` | Allocation cancelled and stock released | CANCELLED |
+| `DEMO-R12` | Unresolved delivery failure | DELIVERY_FAILED |
+| `DEMO-R13` | Failed attempt retried with another vehicle | DISPATCHED |
+| `DEMO-R14` | Partial allocation with medicine shortage | ALLOCATED |
+| `DEMO-R15` | New stock followed by reallocation | ALLOCATED |
+| `DEMO-R16` | Probable duplicate for an open area | SUBMITTED |
 
 ### Demonstration walkthrough
 
-1. Log in as `relief_coordinator` and open **Allocation & Dispatch**. Select the VERIFIED request, press **Preview plan**, then switch the strategy dropdown and preview again — the same request produces a completely different distribution (one center vs. split across three). This is the Strategy pattern demonstrated live, with no data written.
-2. Open **Relief Requests** and press **Details** on the DELIVERED request to see its three verification rounds and its full status-history audit trail.
-3. Log in as `volunteer`, create a new HIGH-priority draft with two items, and submit it. Picking an area that already has an open request triggers the duplicate warning.
-4. Log in as `area_coordinator` and approve — the request stays SUBMITTED because a HIGH request needs a second round (Chain of Responsibility). Log in as `relief_coordinator` to approve round 2; it becomes VERIFIED.
-5. Allocate it, then log in as `transport`. Select an available vehicle, enter the driver name, review the load/capacity check, and dispatch. You can confirm delivery, or report a failure with a reason and recovery action. A retry creates a new immutable dispatch attempt; a reallocation recovery is completed by `relief_coordinator` and returns explicitly recoverable stock before a new allocation. Open **Details** to inspect every attempt and failure record.
+1. Log in as `relief_coordinator`, open **Allocation & Dispatch**, select `DEMO-R06`, and preview both strategies. **Fewest Centers** uses the largest stockpiles first, while **Balanced Across Centers** visibly splits the same request across more centers without writing data.
+2. Open **Relief Requests** and inspect `DEMO-R04` to see two completed Critical verification rounds with Administrator approval still pending. Inspect `DEMO-R09` for the completed three-round chain and delivery history.
+3. Inspect `DEMO-R11` for inactive allocations and release events, `DEMO-R14` for outstanding medicine need, and `DEMO-R15` for separate allocation and reallocation audit events.
+4. Log in as `transport`. `DEMO-R08` has one active manifest, `DEMO-R12` has an unresolved delivery failure awaiting reallocation recovery, and `DEMO-R13` preserves its failed first attempt plus active retry attempt.
+5. Open **Reports** for the varied status summary, area fulfillment, and low-stock lines. Open **Notifications** under different role accounts to see recipient-specific submission, verification, allocation, low-stock, failure, and delivery events.
 
 Vehicle capacity is intentionally modeled as generic load units for this compact academic application: each allocated resource quantity consumes one capacity unit, even though real resources use different physical units.
 

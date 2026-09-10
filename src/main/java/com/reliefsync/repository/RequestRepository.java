@@ -89,6 +89,23 @@ public class RequestRepository {
         }
     }
 
+    /** Exact deterministic demo-scenario lookup without exposing seed SQL to the seeder. */
+    public Optional<ReliefRequest> findByNotePrefix(String prefix) {
+        String sql = "SELECT * FROM relief_requests WHERE note LIKE ? ORDER BY id LIMIT 1";
+        try (PreparedStatement ps = c().prepareStatement(sql)) {
+            ps.setString(1, prefix + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return Optional.empty();
+                return Optional.of(new ReliefRequest(rs.getLong("id"), rs.getLong("area_id"),
+                        Priority.valueOf(rs.getString("priority")),
+                        RequestStatus.valueOf(rs.getString("status")), rs.getString("note"),
+                        rs.getLong("created_by"), rs.getString("created_at")));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not find demo request", e);
+        }
+    }
+
     public void updateStatus(long id, RequestStatus status) {
         try (PreparedStatement ps = c().prepareStatement("UPDATE relief_requests SET status=? WHERE id=?")) {
             ps.setString(1, status.name());
